@@ -21,5 +21,7 @@ public enum Rarity {
         this.weight = weight;
     }
 
+    public TextColor color() { return color; }
+
     public String key() { return name().toLowerCase(Locale.ROOT); }
 }

@@ -61,7 +61,7 @@ public final class AdminMenu implements InventoryHolder {
             if (v != null) setter.accept(v.trim());
             new AdminMenu(plugin, player).open();
         });
-        Bukkit.getScheduler().runTask(plugin, player::closeInventory);
+        Bukkit.getScheduler().runTask(plugin, () -> player.closeInventory());
     }
 
     private void render() {
@@ -90,7 +90,7 @@ public final class AdminMenu implements InventoryHolder {
         set(5, it.menu("reset", "Reset", NamedTextColor.GRAY, 1, "Clears the form"), t -> d.reset());
         set(6, it.menu("gift", "Give test pack", NamedTextColor.LIGHT_PURPLE, 1, "Gives you one pack"),
                 t -> player.getInventory().addItem(plugin.items().pack(1)));
-        set(7, it.menu("close", "Close menu", NamedTextColor.RED, 1), t -> Bukkit.getScheduler().runTask(plugin, player::closeInventory));
+        set(7, it.menu("close", "Close menu", NamedTextColor.RED, 1), t -> Bukkit.getScheduler().runTask(plugin, () -> player.closeInventory()));
         set(8, it.menu("create", "Create card", NamedTextColor.GREEN, 1, "Saves the card", "Adds it to packs if ON"), t -> create());
 
         int[] deltas = {-5, -1, 1, 5};
