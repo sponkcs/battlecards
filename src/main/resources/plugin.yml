@@ -1,0 +1,24 @@
+name: SneakyCards
+version: ${version}
+main: dev.sneakycards.SneakyCardsPlugin
+api-version: '26.2'
+description: SneakyCards: collectible mannequin cards, binder, packs and a game mat.
+commands:
+  cardadmin:
+    description: Card admin menu and tools
+    usage: /cardadmin [give|binder|mat|place|move|hurt|clear|list|pack|reload]
+    permission: sneakycards.admin
+    aliases: [ca]
+  sneakycards:
+    description: Battle commands and rules
+    usage: /sneakycards [turn|forfeit|help]
+    permission: sneakycards.play
+    aliases: [sc]
+  binder:
+    description: Open your card binder
+    permission: sneakycards.play
+permissions:
+  sneakycards.admin:
+    default: op
+  sneakycards.play:
+    default: true

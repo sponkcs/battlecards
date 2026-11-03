@@ -1,0 +1,9 @@
+cards-per-pack: 3
+max-cards-per-player: 3     # cards a player can have on the mat at once
+hover-height: 0.6           # how far the mannequin floats above its card (blocks)
+mannequin-scale: 0.45
+placeholder-skin: "Steve"   # used by cards whose skin is "placeholder". Put a textures.minecraft.net link of tools/placeholder_skin.png here
+resource-pack:
+  url: ""                   # public link to sneakycards-resourcepack.zip
+  sha1: ""                  # 40-character sha1 of the zip (printed by tools/make_pack.py)
+  required: false
