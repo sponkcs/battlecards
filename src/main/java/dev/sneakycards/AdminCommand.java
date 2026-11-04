@@ -30,7 +30,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "binder" -> {
                 Player t = a.length > 1 ? Bukkit.getPlayerExact(a[1]) : (s instanceof Player p ? p : null);
                 if (t == null) { say(s, "Player not found."); return true; }
-                t.getInventory().addItem(plugin.items().binder());
+                Items.give(t, plugin.items().binder());
                 say(s, "Gave a binder to " + t.getName() + ".");
             }
             case "list" -> {
@@ -82,7 +82,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         if (v == null) { say(s, "Usage: /cardadmin mat <classic|purple|neon> [player]  or  /cardadmin mat remove"); return; }
         Player t = a.length > 2 ? Bukkit.getPlayerExact(a[2]) : (s instanceof Player p ? p : null);
         if (t == null) { say(s, "Player not found."); return; }
-        t.getInventory().addItem(plugin.items().mat(v));
+        Items.give(t, plugin.items().mat(v));
         say(s, "Gave a " + v.label + " mat to " + t.getName() + ".");
     }
 
@@ -92,14 +92,14 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         if (t == null) { say(s, "Player not found."); return; }
         if (a[2].equalsIgnoreCase("pack")) {
             int n = a.length > 3 ? parse(a[3]) : 1;
-            t.getInventory().addItem(plugin.items().pack(n));
+            Items.give(t, plugin.items().pack(n));
             say(s, "Gave " + n + " pack(s) to " + t.getName() + ".");
         } else if (a[2].equalsIgnoreCase("card") && a.length > 3) {
             Card card = plugin.registry().get(a[3]);
             if (card == null) { say(s, "No such card."); return; }
             var item = plugin.items().card(card);
             item.setAmount(a.length > 4 ? parse(a[4]) : 1);
-            t.getInventory().addItem(item);
+            Items.give(t, item);
             say(s, "Gave " + card.name() + " to " + t.getName() + ".");
         }
     }

@@ -49,6 +49,14 @@ public final class Items {
         return b.build();
     }
 
+    /** Puts items in the player's inventory; anything that doesn't fit drops at their feet. Returns true if something dropped. */
+    public static boolean give(org.bukkit.entity.Player p, ItemStack... items) {
+        var left = p.getInventory().addItem(items);
+        left.values().forEach(x -> p.getWorld().dropItem(p.getLocation(), x, d -> d.setPickupDelay(10)));
+        if (!left.isEmpty()) p.sendActionBar(Component.text("Inventory full: items dropped at your feet.", NamedTextColor.YELLOW));
+        return !left.isEmpty();
+    }
+
     static Component t(String s, TextColor c) { return Component.text(s, c).decoration(TextDecoration.ITALIC, false); }
 
     private static void model(ItemMeta m, String path) { m.setItemModel(NamespacedKey.fromString("sneakycards:" + path)); }

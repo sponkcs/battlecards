@@ -89,7 +89,7 @@ public final class AdminMenu implements InventoryHolder {
         set(5, it.menu("reset", d.editing == null ? "Reset" : "Stop editing", NamedTextColor.GRAY, 1,
                 d.editing == null ? "Clears the form" : "Clears the form and goes back to making a new card"), t -> d.reset());
         set(6, it.menu("gift", "Give test pack", NamedTextColor.LIGHT_PURPLE, 1, "Gives you one pack"),
-                t -> player.getInventory().addItem(plugin.items().pack(1)));
+                t -> Items.give(player, plugin.items().pack(1)));
         set(7, it.menu("close", "Close menu", NamedTextColor.RED, 1), t -> Bukkit.getScheduler().runTask(plugin, () -> player.closeInventory()));
         if (d.editing == null)
             set(8, it.menu("create", "Create card", NamedTextColor.GREEN, 1, "Saves the card", "Adds it to packs if ON"), t -> create());
@@ -200,7 +200,7 @@ public final class AdminMenu implements InventoryHolder {
         Card c = new Card(id, d.name, d.skin, d.title, d.rarity, d.background, new EnumMap<>(d.stats),
                 List.of(new Move(d.moveNames[0], d.moveStats[0]), new Move(d.moveNames[1], d.moveStats[1])), d.inPacks, d.slim);
         plugin.registry().add(c);
-        player.getInventory().addItem(plugin.items().card(c));
+        Items.give(player, plugin.items().card(c));
         player.sendMessage(Component.text("Created ", NamedTextColor.GREEN).append(Items.t(c.name(), c.rarity().color()))
                 .append(Component.text(c.inPacks() ? " and added it to the pack pool." : ".", NamedTextColor.GREEN)));
         d.name = ""; d.skin = "";

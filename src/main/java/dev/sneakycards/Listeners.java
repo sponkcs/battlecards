@@ -130,7 +130,7 @@ public final class Listeners implements Listener {
                 else if (placed.mat.state == Mat.State.FIGHTING) battles.openTurnMenu(p);
             } else if (p.isSneaking()) {
                 plugin.displays().remove(placed);
-                p.getInventory().addItem(plugin.items().card(placed.card));
+                Items.give(p, plugin.items().card(placed.card));
             }
             return;
         }
@@ -149,7 +149,7 @@ public final class Listeners implements Listener {
 
     private final Map<UUID, Long> lastPack = new HashMap<>();
 
-    /** Opens one pack. Rate-limited per player, refuses when the inventory can't hold the cards (no ground drops). */
+    /** Opens one pack. Rate-limited per player; cards that don't fit drop at the player's feet. */
     private void openPack(Player p, ItemStack pack) {
         long now = System.currentTimeMillis();
         long cooldown = plugin.getConfig().getLong("pack-cooldown-ms", 400);
@@ -162,26 +162,18 @@ public final class Listeners implements Listener {
             p.sendMessage(Component.text("There are no cards in the pack pool yet.", NamedTextColor.RED));
             return;
         }
-        if (freeSlots(p) < n) {
-            p.sendActionBar(Component.text("Make room in your inventory first (" + n + " free slots).", NamedTextColor.RED));
-            return;
-        }
         pack.setAmount(pack.getAmount() - 1);
         var line = Component.text().append(Component.text("Pack: ", NamedTextColor.GOLD));
+        boolean dropped = false;
         for (int i = 0; i < n; i++) {
             Card c = plugin.registry().draw(rng);
-            p.getInventory().addItem(plugin.items().card(c));
+            if (Items.give(p, plugin.items().card(c))) dropped = true;
             if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
             line.append(Items.t(c.name(), c.rarity().color()));
         }
         p.sendMessage(line.build());
+        if (dropped) p.sendMessage(Component.text("Your inventory was full, so some cards dropped at your feet.", NamedTextColor.YELLOW));
         p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.4f);
-    }
-
-    private static int freeSlots(Player p) {
-        int free = 0;
-        for (ItemStack s : p.getInventory().getStorageContents()) if (s == null || s.getType().isAir()) free++;
-        return free;
     }
 
     @EventHandler
