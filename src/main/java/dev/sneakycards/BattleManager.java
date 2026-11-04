@@ -67,7 +67,7 @@ public final class BattleManager {
 
     public Mat placeMat(Player p, Location top, float yaw, MatVariant v) {
         for (Mat o : mats) {
-            if (o.center.getWorld().equals(top.getWorld()) && o.center.distanceSquared(top) < 36) {
+            if (o.center.getWorld().equals(top.getWorld()) && o.center.distanceSquared(top) < 16) {
                 say(p, "That is too close to another mat.", NamedTextColor.RED);
                 return null;
             }
@@ -79,13 +79,13 @@ public final class BattleManager {
             d.setItemStack(item);
             d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
             d.setRotation(yaw, 0);
-            // the model is 5:7 and one block long; scale it up to 5 x 7 blocks
-            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(7f, 1f, 7f), new AxisAngle4f()));
+            // the model is a 1 x 1 block plate; scale it up to 3 x 3 blocks
+            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(3f, 1f, 3f), new AxisAngle4f()));
             d.setPersistent(false);
         });
         m.core = w.spawn(top.clone(), Interaction.class, i -> {
-            i.setInteractionWidth(1.2f);
-            i.setInteractionHeight(0.15f);
+            i.setInteractionWidth(0.45f);
+            i.setInteractionHeight(0.12f);
             i.setResponsive(true);
             i.setPersistent(false);
         });
@@ -95,8 +95,8 @@ public final class BattleManager {
         for (int side = 0; side < 2; side++) {
             for (int col = 0; col < 3; col++) {
                 Interaction hit = w.spawn(m.slotTop(side, col), Interaction.class, i -> {
-                    i.setInteractionWidth((float) 1.3);
-                    i.setInteractionHeight(0.15f);
+                    i.setInteractionWidth(0.72f);
+                    i.setInteractionHeight(0.12f);
                     i.setResponsive(true);
                     i.setPersistent(false);
                 });
@@ -252,8 +252,9 @@ public final class BattleManager {
         Title t = Title.title(Component.text("Battle!", NamedTextColor.RED).decorate(TextDecoration.BOLD), Component.text(who + " goes first", NamedTextColor.GOLD),
                 Title.Times.times(Duration.ofMillis(300), Duration.ofSeconds(2), Duration.ofMillis(400)));
         for (UUID id : m.players) { Player p = id == null ? null : Bukkit.getPlayer(id); if (p != null) p.showTitle(t); }
-        for (int s = 0; s < 2; s++) for (var c : m.cards[s]) if (c != null) m.center.getWorld().spawnParticle(Particle.CRIT, c.base.clone().add(0, 1, 0), 10, 0.3, 0.3, 0.3, 0.1);
-        beginTurn(m);
+        for (int s = 0; s < 2; s++) for (var c : m.cards[s]) if (c != null) m.center.getWorld().spawnParticle(Particle.CRIT, c.base.clone().add(0, 0.5, 0), 10, 0.2, 0.2, 0.2, 0.1);
+        m.busy = true;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (m.state == Mat.State.FIGHTING && mats.contains(m)) beginTurn(m); }, 50L);
     }
 
     private void beginTurn(Mat m) {
@@ -262,11 +263,16 @@ public final class BattleManager {
         Player cur = Bukkit.getPlayer(m.players[side]);
         Player other = m.players[1 - side] == null ? null : Bukkit.getPlayer(m.players[1 - side]);
         if (cur != null) {
-            say(cur, "Your turn! Choose a card, a move and a target. (Right-click your card or use /sneakycards turn to reopen the menu.)", NamedTextColor.GREEN);
-            cur.sendActionBar(Component.text("Your turn", NamedTextColor.GREEN));
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (m.state == Mat.State.FIGHTING && m.turn == side && cur.isOnline()) new BattleMenu(plugin, cur, m).open();
-            });
+            say(cur, "Your turn! Choose a card, a move and a target. (Right-click your card or use /sneakycards turn to open the menu.)", NamedTextColor.GREEN);
+            cur.showTitle(Title.title(Component.empty(), Component.text("Your turn", NamedTextColor.GREEN),
+                    Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1200), Duration.ofMillis(300))));
+            cur.playSound(cur.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.4f);
+            long delay = plugin.getConfig().getLong("turn-menu-delay-ticks", 40);
+            if (delay >= 0) Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (m.state != Mat.State.FIGHTING || m.turn != side || m.busy || !cur.isOnline()) return;
+                if (cur.getOpenInventory().getTopInventory().getHolder() instanceof BattleMenu) return; // already opened it
+                new BattleMenu(plugin, cur, m).open();
+            }, delay);
         }
         if (other != null) other.sendActionBar(Component.text(nameOf(m.players[side]) + "'s turn", NamedTextColor.GRAY));
     }
@@ -293,24 +299,34 @@ public final class BattleManager {
         if (m.state != Mat.State.FIGHTING) return;
         tgt.hp = Math.max(0, tgt.hp - dmg);
         displays().refreshHp(tgt);
-        displays().hurt(tgt);
+        displays().hurt(tgt, att, crit);
         Component num = crit
                 ? Component.text("CRIT -" + dmg, NamedTextColor.GOLD).decorate(TextDecoration.BOLD)
                 : Component.text("-" + dmg, NamedTextColor.RED).decorate(TextDecoration.BOLD);
-        displays().popup(tgt.base.clone().add(0, 1.4, 0), num);
+        displays().popup(tgt.base.clone().add(0, 1.05, 0), num, crit ? 1.3f : 0.9f);
         Component msg = Component.text(att.card.name(), att.card.rarity().color())
                 .append(Component.text(" used " + mv.name() + " on ", NamedTextColor.WHITE))
                 .append(Component.text(tgt.card.name(), tgt.card.rarity().color()))
                 .append(Component.text(" for " + dmg + " damage" + (crit ? " (critical hit!)" : "") + ".", crit ? NamedTextColor.GOLD : NamedTextColor.WHITE));
         tell(m, msg);
         if (tgt.hp <= 0) {
-            displays().knockOut(tgt);
-            tell(m, Component.text(tgt.card.name() + " is knocked out!", NamedTextColor.RED));
+            // let the hit animation play before the card goes down
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (m.state != Mat.State.FIGHTING || !mats.contains(m)) return;
+                displays().knockOut(tgt);
+                tell(m, Component.text(tgt.card.name() + " is knocked out!", NamedTextColor.RED));
+            }, crit ? 20L : 14L);
         }
     }
 
+    /** Waits a moment after the move so players can see what happened, then checks for a winner. */
     private void afterAttack(Mat m) {
-        if (m.state != Mat.State.FIGHTING) return;
+        long pause = plugin.getConfig().getLong("pause-after-attack-ticks", 30);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> nextTurn(m), Math.max(22L, pause));
+    }
+
+    private void nextTurn(Mat m) {
+        if (m.state != Mat.State.FIGHTING || !mats.contains(m)) return;
         if (m.allKnockedOut(0)) { end(m, 1); return; }
         if (m.allKnockedOut(1)) { end(m, 0); return; }
         m.turn = 1 - m.turn;
@@ -334,8 +350,8 @@ public final class BattleManager {
         }
         tell(m, Component.text(nameOf(win) + " wins the battle! Cards return to their owners shortly.", NamedTextColor.GOLD));
         for (var c : m.cards[winner]) if (c != null && !c.ko) {
-            m.center.getWorld().spawnParticle(Particle.FIREWORK, c.base.clone().add(0, 1, 0), 30, 0.3, 0.5, 0.3, 0.1);
-            m.center.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, c.base.clone().add(0, 1, 0), 20, 0.3, 0.5, 0.3, 0.3);
+            m.center.getWorld().spawnParticle(Particle.FIREWORK, c.base.clone().add(0, 0.6, 0), 30, 0.2, 0.3, 0.2, 0.1);
+            m.center.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, c.base.clone().add(0, 0.6, 0), 20, 0.2, 0.3, 0.2, 0.3);
         }
         for (UUID id : m.players) {
             Player p = id == null ? null : Bukkit.getPlayer(id);

@@ -35,6 +35,7 @@ public final class DisplayManager {
         Mat mat; int side = -1, col = -1;
         // attack animation state
         Vector dir; double reach = 1.0; Placed target; Runnable onImpact, onDone;
+        boolean bigHit = false;   // the hurt animation is for a critical hit
         Placed(UUID owner, Card card, Location base, float yaw) { this.owner = owner; this.card = card; this.base = base; this.yaw = yaw; }
     }
 
@@ -67,21 +68,21 @@ public final class DisplayManager {
         p.maxHp = card.stat(Stat.HEALTH);
         p.hp = p.maxHp;
         ItemStack item = plugin.items().card(card);
-        double hover = plugin.getConfig().getDouble("hover-height", 0.6);
-        double scale = plugin.getConfig().getDouble("mannequin-scale", 0.45);
+        double hover = hover(), scale = scale(), headTop = hover + 1.85 * scale;
 
-        p.face = w.spawn(top.clone().add(0, 0.03, 0), ItemDisplay.class, d -> {
+        // the mat surface is about 0.063 above the block top, so the card sits just above it
+        p.face = w.spawn(top.clone().add(0, 0.075, 0), ItemDisplay.class, d -> {
             d.setItemStack(item);
             d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
             d.setRotation(yaw, 0);
             // Lays the card flat. Tune angle/scale on your server if it looks mirrored.
             d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f((float) Math.toRadians(-90), 1, 0, 0),
-                    new Vector3f(1.7f, 1.7f, 1.7f), new AxisAngle4f()));
+                    new Vector3f(1.08f, 1.08f, 1.08f), new AxisAngle4f()));
             d.setPersistent(false);
         });
         p.hit = w.spawn(top.clone(), Interaction.class, i -> {
-            i.setInteractionWidth(1.1f);
-            i.setInteractionHeight(1.5f);
+            i.setInteractionWidth(0.7f);
+            i.setInteractionHeight((float) (headTop + 0.1));
             i.setResponsive(true);
             i.setPersistent(false);
         });
@@ -100,27 +101,32 @@ public final class DisplayManager {
             AttributeInstance sc = m.getAttribute(Attribute.SCALE);
             if (sc != null) sc.setBaseValue(scale);
         });
-        p.hpText = w.spawn(top.clone().add(0, 1.75, 0), TextDisplay.class, t -> {
+        p.hpText = w.spawn(top.clone().add(0, headTop + 0.18, 0), TextDisplay.class, t -> {
             t.text(hpLine(p));
             t.setBillboard(Display.Billboard.CENTER);
             t.setBackgroundColor(Color.fromARGB(120, 10, 10, 16));
             t.setPersistent(false);
-            t.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.6f, 0.6f, 0.6f), new AxisAngle4f()));
+            t.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.4f, 0.4f, 0.4f), new AxisAngle4f()));
         });
-        p.preview = w.spawn(top.clone().add(0, 2.2, 0), TextDisplay.class, t -> {
+        p.preview = w.spawn(top.clone().add(0, headTop + 0.55, 0), TextDisplay.class, t -> {
             t.text(previewText(card));
             t.setBillboard(Display.Billboard.CENTER);
             t.setBackgroundColor(Color.fromARGB(170, 15, 15, 20));
             t.setLineWidth(240);
             t.setVisibleByDefault(false);
             t.setPersistent(false);
-            t.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.7f, 0.7f, 0.7f), new AxisAngle4f()));
+            t.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.5f, 0.5f, 0.5f), new AxisAngle4f()));
         });
         placed.add(p);
         byEntity.put(p.hit.getUniqueId(), p);
         byEntity.put(p.man.getUniqueId(), p);
         return p;
     }
+
+    private double hover() { return plugin.getConfig().getDouble("mannequin-hover", 0.3); }
+    private double scale() { return plugin.getConfig().getDouble("mannequin-size", 0.28); }
+    /** Animation distances were tuned for a 0.45 mannequin; shrink them with the mannequin. */
+    private double k() { return scale() / 0.45; }
 
     private ResolvableProfile profile(Card c) {
         var b = ResolvableProfile.resolvableProfile();
@@ -194,7 +200,7 @@ public final class DisplayManager {
         to.setY(0);
         double dist = Math.max(0.01, to.length());
         att.dir = to.normalize();
-        att.reach = Math.max(1.0, dist * 0.5 / 1.1);
+        att.reach = Math.max(0.5, dist * 0.45 / (1.1 * k()));
         att.target = tgt;
         att.onImpact = onImpact;
         att.onDone = onDone;
@@ -219,13 +225,24 @@ public final class DisplayManager {
         if (owner != null) owner.sendActionBar(Component.text(p.card.name() + " uses " + move.name() + "!", p.card.rarity().color()));
     }
 
-    public void hurt(Placed p) { p.anim = Anim.HURT; p.animTick = 0; }
+    public void hurt(Placed p) { hurt(p, null, false); }
+
+    /** Knocks the target back (away from the attacker), flashes it red and shakes it. A crit hits harder. */
+    public void hurt(Placed p, Placed from, boolean crit) {
+        Vector push = from == null ? forward(p.yaw).multiply(-1) : p.base.toVector().subtract(from.base.toVector()).setY(0);
+        if (push.lengthSquared() < 1e-6) push = forward(p.yaw).multiply(-1);
+        p.dir = push.normalize();
+        p.bigHit = crit;
+        p.anim = Anim.HURT; p.animTick = 0;
+        p.onImpact = null; p.onDone = null; p.target = null;
+    }
 
     public void knockOut(Placed p) {
         p.ko = true;
         World w = p.base.getWorld();
-        Location l = p.base.clone().add(0, 0.9, 0);
-        w.spawnParticle(Particle.LARGE_SMOKE, l, 18, 0.25, 0.4, 0.25, 0.02);
+        Location l = p.base.clone().add(0, hover() + 0.5 * scale(), 0);
+        w.spawnParticle(Particle.LARGE_SMOKE, l, 18, 0.2, 0.3, 0.2, 0.02);
+        w.spawnParticle(Particle.POOF, l, 20, 0.2, 0.3, 0.2, 0.05);
         w.playSound(l, Sound.ENTITY_PLAYER_DEATH, 0.7f, 1.2f);
         if (p.man != null) { byEntity.remove(p.man.getUniqueId()); p.man.remove(); p.man = null; }
         if (p.face != null) p.face.setBrightness(new Display.Brightness(1, 1));
@@ -234,9 +251,12 @@ public final class DisplayManager {
     }
 
     /** Floating number that rises and fades away. */
-    public void popup(Location at, Component text) {
+    public void popup(Location at, Component text) { popup(at, text, 1f); }
+
+    public void popup(Location at, Component text, float size) {
         TextDisplay t = at.getWorld().spawn(at, TextDisplay.class, d -> {
             d.text(text);
+            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(size, size, size), new AxisAngle4f()));
             d.setBillboard(Display.Billboard.CENTER);
             d.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             d.setSeeThrough(true);
@@ -245,8 +265,8 @@ public final class DisplayManager {
         new BukkitRunnable() {
             int n = 0;
             @Override public void run() {
-                if (++n > 26 || !t.isValid()) { t.remove(); cancel(); return; }
-                t.teleport(t.getLocation().add(0, 0.04, 0));
+                if (++n > 30 || !t.isValid()) { t.remove(); cancel(); return; }
+                t.teleport(t.getLocation().add(0, n < 6 ? 0.06 : 0.02, 0));
             }
         }.runTaskTimer(plugin, 1L, 1L);
     }
@@ -263,21 +283,30 @@ public final class DisplayManager {
     }
 
     private void tick() {
-        double hover = plugin.getConfig().getDouble("hover-height", 0.6);
+        double hover = hover(), k = k();
         for (Placed p : new ArrayList<>(placed)) {
             if (p.man == null || !p.man.isValid()) continue;
             p.age++;
-            double up = hover + Math.sin(p.age * 0.12) * 0.06, fwd = 0, side = 0;
+            double up = hover + Math.sin(p.age * 0.12) * 0.04 * k, fwd = 0, side = 0;
             float yawAdd = 0;
             int a = p.animTick;
             if (p.anim != Anim.NONE) {
                 boolean done = false;
                 switch (p.anim) {
-                    case LUNGE -> { fwd = (a < 5 ? -0.25 * a / 5.0 : a < 9 ? -0.25 + 1.35 * (a - 5) / 4.0 : 1.1 * (1 - (a - 9) / 7.0)) * p.reach; done = a >= 16; }
-                    case DASH -> { fwd = Math.sin(a / 14.0 * Math.PI) * 0.7 * Math.min(p.reach, 1.6); side = Math.sin(a / 14.0 * Math.PI * 2) * 0.6; done = a >= 14; }
-                    case SPIN -> { up += Math.sin(a / 24.0 * Math.PI) * 0.7; yawAdd = a * 30f; done = a >= 24; }
-                    case BOUNCE -> { up += Math.abs(Math.sin(a / 20.0 * Math.PI * 2)) * 0.5; done = a >= 20; }
-                    case HURT -> { side = Math.sin(a * 2.5) * 0.12 * (1 - a / 10.0); done = a >= 10; }
+                    case LUNGE -> { fwd = (a < 5 ? -0.25 * a / 5.0 : a < 9 ? -0.25 + 1.35 * (a - 5) / 4.0 : 1.1 * (1 - (a - 9) / 7.0)) * p.reach * k; done = a >= 16; }
+                    case DASH -> { fwd = Math.sin(a / 14.0 * Math.PI) * 0.7 * Math.min(p.reach, 1.6) * k; side = Math.sin(a / 14.0 * Math.PI * 2) * 0.6 * k; done = a >= 14; }
+                    case SPIN -> { up += Math.sin(a / 24.0 * Math.PI) * 0.7 * k; yawAdd = a * 30f; done = a >= 24; }
+                    case BOUNCE -> { up += Math.abs(Math.sin(a / 20.0 * Math.PI * 2)) * 0.5 * k; done = a >= 20; }
+                    case HURT -> {
+                        // snap back, hop, wobble, then settle (crits hit harder and last longer)
+                        int len = p.bigHit ? 24 : 18;
+                        double power = p.bigHit ? 1.7 : 1.0, fade = Math.max(0, 1 - a / (double) len);
+                        fwd = (a < 3 ? 0.32 * a / 3.0 : 0.32 * fade * fade) * power * k;
+                        if (a < 7) up += Math.sin(a / 7.0 * Math.PI) * 0.16 * power * k;
+                        side = Math.sin(a * 2.6) * 0.07 * power * k * fade;
+                        yawAdd = (float) (Math.sin(a * 2.1) * 28 * power * fade);
+                        done = a >= len;
+                    }
                     default -> { }
                 }
                 p.animTick++;
@@ -310,42 +339,61 @@ public final class DisplayManager {
 
     private void effects(Placed p, Location l, Vector f, int a) {
         World w = l.getWorld();
-        Location at = p.target != null ? p.target.base.clone().add(0, 0.9, 0) : l.clone().add(f.clone().multiply(0.6)).add(0, 0.8, 0);
+        double mid = hover() + 0.9 * scale();
+        Location at = p.target != null ? p.target.base.clone().add(0, mid, 0) : l.clone().add(f.clone().multiply(0.4)).add(0, 0.9 * scale(), 0);
         switch (p.anim) {
             case LUNGE -> {
                 if (a == 9) {
                     w.spawnParticle(Particle.SWEEP_ATTACK, at, 1);
-                    w.spawnParticle(Particle.CRIT, at, 12, 0.3, 0.3, 0.3, 0.2);
+                    w.spawnParticle(Particle.CRIT, at, 12, 0.2, 0.2, 0.2, 0.2);
                     w.playSound(at, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1f);
                 }
             }
             case DASH -> {
-                if (a % 2 == 0) w.spawnParticle(Particle.CLOUD, l.clone().add(0, 0.3, 0), 3, 0.15, 0.1, 0.15, 0.01);
+                if (a % 2 == 0) w.spawnParticle(Particle.CLOUD, l.clone().add(0, 0.1, 0), 3, 0.1, 0.05, 0.1, 0.01);
                 if (a == 7) {
-                    w.spawnParticle(Particle.CRIT, at, 14, 0.3, 0.3, 0.3, 0.25);
+                    w.spawnParticle(Particle.CRIT, at, 14, 0.2, 0.2, 0.2, 0.25);
                     w.playSound(at, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1.3f);
                 }
             }
             case SPIN -> {
-                w.spawnParticle(Particle.ENCHANT, l.clone().add(0, 0.8, 0), 6, 0.5, 0.6, 0.5, 0.4);
+                w.spawnParticle(Particle.ENCHANT, l.clone().add(0, 0.9 * scale(), 0), 6, 0.3, 0.35, 0.3, 0.3);
                 if (a == 12) {
-                    beam(l.clone().add(0, 0.9, 0), at, Particle.END_ROD);
-                    w.spawnParticle(Particle.END_ROD, at, 15, 0.3, 0.5, 0.3, 0.05);
+                    beam(l.clone().add(0, 0.9 * scale(), 0), at, Particle.END_ROD);
+                    w.spawnParticle(Particle.END_ROD, at, 15, 0.2, 0.3, 0.2, 0.05);
                     w.playSound(at, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.2f);
                 }
             }
             case BOUNCE -> {
-                if (a == 5) w.spawnParticle(Particle.HAPPY_VILLAGER, l.clone().add(0, 0.8, 0), 8, 0.4, 0.4, 0.4, 0);
+                if (a == 5) w.spawnParticle(Particle.HAPPY_VILLAGER, l.clone().add(0, 0.9 * scale(), 0), 8, 0.25, 0.25, 0.25, 0);
                 if (a == 10) {
-                    beam(l.clone().add(0, 0.9, 0), at, Particle.HAPPY_VILLAGER);
-                    w.spawnParticle(Particle.HAPPY_VILLAGER, at, 12, 0.4, 0.4, 0.4, 0);
+                    beam(l.clone().add(0, 0.9 * scale(), 0), at, Particle.HAPPY_VILLAGER);
+                    w.spawnParticle(Particle.HAPPY_VILLAGER, at, 12, 0.25, 0.25, 0.25, 0);
                     w.playSound(at, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.8f);
                 }
             }
             case HURT -> {
+                double body = 0.9 * scale();
+                Location c = l.clone().add(0, body, 0);
                 if (a == 0) {
-                    w.spawnParticle(Particle.DAMAGE_INDICATOR, l.clone().add(0, 0.8, 0), 6, 0.3, 0.4, 0.3, 0.1);
-                    w.playSound(l, Sound.ENTITY_PLAYER_HURT, 0.8f, 1f);
+                    if (p.man != null) p.man.playHurtAnimation(0f);           // red flash on the mannequin
+                    if (p.face != null) { p.face.setGlowColorOverride(Color.RED); p.face.setGlowing(true); }
+                    if (p.hpText != null) p.hpText.setBackgroundColor(Color.fromARGB(190, 170, 20, 20));
+                    w.spawnParticle(Particle.DAMAGE_INDICATOR, c, p.bigHit ? 14 : 7, 0.15, 0.2, 0.15, 0.15);
+                    w.spawnParticle(Particle.CRIT, c, p.bigHit ? 24 : 10, 0.15, 0.2, 0.15, 0.35);
+                    w.playSound(l, Sound.ENTITY_PLAYER_HURT, 1f, p.bigHit ? 0.8f : 1.1f);
+                    if (p.bigHit) {
+                        w.spawnParticle(Particle.EXPLOSION, c, 1);
+                        w.playSound(l, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 0.7f);
+                        w.playSound(l, Sound.ENTITY_GENERIC_EXPLODE, 0.35f, 1.6f);
+                    }
+                }
+                if (a == 3) w.playSound(l, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 0.8f, 1.2f);
+                if (a > 0 && a < 8 && a % 2 == 0) w.spawnParticle(Particle.SMOKE, l.clone().add(0, 0.05, 0), 2, 0.08, 0, 0.08, 0.01);
+                if (a == 4 && p.bigHit && p.man != null) p.man.playHurtAnimation(0f);
+                if (a == 8) {
+                    if (p.face != null) p.face.setGlowing(false);
+                    if (p.hpText != null) p.hpText.setBackgroundColor(Color.fromARGB(120, 10, 10, 16));
                 }
             }
             default -> { }

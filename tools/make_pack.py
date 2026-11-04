@@ -161,11 +161,11 @@ for bk in BACKGROUNDS:
               {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/{n}", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/{n}"}})
         wjson(path("assets", NS, "items", n + ".json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/{n}"}})
 
-# ---------- game mats: a flat plate 11.43 x 16 model units (5:7); the plugin scales it (7, 1, 7) to 5 x 7 blocks ----------
+# ---------- game mats: a flat square plate 16 x 16 model units; the plugin scales it (3, 1, 3) to 3 x 3 blocks ----------
 from mats import MATS
 wjson(path("assets", NS, "models", "item", "mat_base.json"), {
     "textures": {"particle": f"{NS}:item/mat_classic"},
-    "elements": [{"from": [2.286, 7.5, 0], "to": [13.714, 8.5, 16], "faces": {
+    "elements": [{"from": [0, 7.5, 0], "to": [16, 8.5, 16], "faces": {
         "up": {"uv": [0,0,16,16], "texture": "#0"}, "down": {"uv": [0,0,16,16], "texture": "#0"},
         "north": {"uv": [0,0,16,1], "texture": "#0"}, "south": {"uv": [0,0,16,1], "texture": "#0"},
         "east": {"uv": [0,0,1,16], "texture": "#0"}, "west": {"uv": [0,0,1,16], "texture": "#0"}}}],
@@ -176,7 +176,7 @@ wjson(path("assets", NS, "models", "item", "mat_base.json"), {
         "ground": {"rotation": [0,0,0], "scale": [0.4,0.4,0.4]},
         "fixed": {"rotation": [0,0,0], "scale": [1,1,1]}}})
 for mk, (mlabel, fn) in MATS.items():
-    art = fn(); art.save(path("assets", NS, "textures", "item", f"mat_{mk}.png")); sheet[f"mat_{mk}"] = art.resize((54, 76), Image.LANCZOS)
+    art = fn(); art.save(path("assets", NS, "textures", "item", f"mat_{mk}.png")); sheet[f"mat_{mk}"] = art.resize((64, 64), Image.LANCZOS)
     wjson(path("assets", NS, "models", "item", f"mat_{mk}.json"), {"parent": f"{NS}:item/mat_base", "textures": {"0": f"{NS}:item/mat_{mk}", "particle": f"{NS}:item/mat_{mk}"}})
     wjson(path("assets", NS, "items", f"mat_{mk}.json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/mat_{mk}"}})
 

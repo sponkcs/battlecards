@@ -1,6 +1,6 @@
 plugins { java }
 group = "dev.sneakycards"
-version = "0.1.3"
+version = "0.2.0"
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")

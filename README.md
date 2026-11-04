@@ -22,11 +22,13 @@ Cards saved with the old names (sakura, arcane) load as Blossom Orchard and Wiza
 Three looks: Classic Felt, Royal Purple, Neon Gradient (cyan to pink). Art lives in `tools/mats.py`.
     /cardadmin mat <classic|purple|neon> [player]    give a mat item
     /cardadmin mat remove                            remove the nearest mat
-Right-click the top of a block with the mat item to place it (needs a flat 5 x 7 area). The player who places it
+Right-click the top of a block with the mat item to place it (it covers 3 x 3 blocks). The player who places it
 stands at the near end. Sneak + right-click the middle of an empty mat to pick it up.
 Mats are not saved: they disappear on restart or when the chunk unloads, and cards on them go back to their owners.
 
 ## How a battle works
+Timing is set in `config.yml`: `turn-menu-delay-ticks` (default 2 s before the turn menu opens) and `pause-after-attack-ticks`.
+Upgrading from 0.1.x? Delete the old `hover-height` and `mannequin-scale` lines from config.yml; the new keys are `mannequin-hover` and `mannequin-size`.
 1. Hold a card and right-click a slot on the mat. The first card claims that side. Fill all 3 slots on your side.
 2. The battle starts when both sides are full. The side with the higher total Dexterity goes first; a tie is a coin flip.
 3. On your turn a menu opens: click one of your cards, one of its 2 moves, then an enemy card. The move deals damage equal to its stat.

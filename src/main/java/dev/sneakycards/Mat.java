@@ -7,12 +7,12 @@ import org.bukkit.util.Vector;
 import java.util.UUID;
 
 /**
- * One placed game mat: 5 blocks wide, 7 blocks long. Side 0 is the near end (where the placer stood),
+ * One placed game mat: 3 x 3 blocks. Side 0 is the near end (where the placer stood),
  * side 1 the far end. Each side has three card slots. Numbers match tools/mats.py.
  */
 final class Mat {
-    static final double ROW_Z = 2.2;      // distance of each card row from the centre
-    static final double COL_SPACING = 1.5;
+    static final double ROW_Z = 0.78;      // distance of each card row from the centre
+    static final double COL_SPACING = 0.88;
 
     enum State { WAITING, FIGHTING, ENDED }
 

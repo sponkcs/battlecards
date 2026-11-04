@@ -1,14 +1,14 @@
-"""Game mat textures. A mat is 5 x 7 blocks: three card slots on each side, a centre strip between them.
-Texture is 320 x 448 (64 px per block); the same layout numbers are used by the plugin (Mat.java)."""
+"""Game mat textures. A mat is 3 x 3 blocks: three card slots on each side, a centre strip between them.
+Texture is 288 x 288 (96 px per block); the same layout numbers are used by the plugin (Mat.java)."""
 from PIL import Image, ImageDraw, ImageFilter
 import math, random
 
-PPB = 64                       # pixels per block
-MW, MH = 5, 7                  # mat size in blocks
+PPB = 96                       # pixels per block
+MW, MH = 3, 3                  # mat size in blocks
 TW, TH = MW * PPB, MH * PPB
-SLOT_W, SLOT_H = 1.3, 1.75     # slot size in blocks
-ROW_Z = 2.2                    # distance of each card row from the centre, in blocks
-COLS = (-1.5, 0.0, 1.5)
+SLOT_W, SLOT_H = 0.74, 0.95     # slot size in blocks
+ROW_Z = 0.78                   # distance of each card row from the centre, in blocks
+COLS = (-0.88, 0.0, 0.88)
 
 def px(bx, bz):                # block offsets from the mat centre -> pixel position
     return TW / 2 + bx * PPB, TH / 2 + bz * PPB
@@ -44,13 +44,13 @@ def star(d, cx, cy, r, fill):
 def common_layout(im, line, slot_fill, corner, emblem):
     d = ImageDraw.Draw(im, "RGBA")
     for b in slot_boxes():
-        d.rounded_rectangle(b, radius=10, fill=slot_fill, outline=line, width=3)
+        d.rounded_rectangle(b, radius=8, fill=slot_fill, outline=line, width=3)
         x0, y0, x1, y1 = b
         for k in range(4):                                  # little corner ticks
             sx, sy = (x0 if k % 2 == 0 else x1), (y0 if k < 2 else y1)
             d.ellipse((sx - 3, sy - 3, sx + 3, sy + 3), fill=corner)
     cx, cz = px(0, 0)
-    d.line([(26, cz), (TW - 26, cz)], fill=line, width=2)
+    d.line([(22, cz), (cx - 26, cz)], fill=line, width=2); d.line([(cx + 26, cz), (TW - 22, cz)], fill=line, width=2)
     emblem(d, cx, cz)
 
 # ---------------------------------------------------------------- classic
@@ -62,12 +62,12 @@ def classic():
             p[x, y] = (31, 90, 74) if stripe else (27, 82, 68)
     d = ImageDraw.Draw(im, "RGBA")
     wood, trim = (107, 74, 43, 255), (160, 116, 66, 255)
-    d.rectangle((0, 0, TW - 1, TH - 1), outline=wood, width=14)
-    d.rectangle((14, 14, TW - 15, TH - 15), outline=trim, width=3)
+    d.rectangle((0, 0, TW - 1, TH - 1), outline=wood, width=12)
+    d.rectangle((12, 12, TW - 13, TH - 13), outline=trim, width=2)
     d.rectangle((0, 0, TW - 1, TH - 1), outline=(70, 46, 26, 255), width=2)
     def emblem(d, cx, cz):
-        d.ellipse((cx - 30, cz - 30, cx + 30, cz + 30), outline=(255, 255, 255, 120), width=3)
-        d.polygon([(cx, cz - 20), (cx + 14, cz), (cx, cz + 20), (cx - 14, cz)], fill=(214, 176, 90, 255), outline=(120, 90, 40, 255))
+        d.ellipse((cx - 20, cz - 20, cx + 20, cz + 20), outline=(255, 255, 255, 120), width=3)
+        d.polygon([(cx, cz - 13), (cx + 9, cz), (cx, cz + 13), (cx - 9, cz)], fill=(214, 176, 90, 255), outline=(120, 90, 40, 255))
     common_layout(im, (255, 255, 255, 120), (0, 0, 0, 56), (255, 255, 255, 150), emblem)
     return im.convert("RGBA")
 
@@ -79,13 +79,13 @@ def purple():
         x, y = rng.randrange(TW), rng.randrange(TH); r = rng.choice([1, 1, 2])
         d.ellipse((x - r, y - r, x + r, y + r), fill=(220, 200, 255, rng.randint(50, 140)))
     gold, dgold = (222, 176, 72, 255), (128, 90, 30, 255)
-    d.rectangle((0, 0, TW - 1, TH - 1), outline=(26, 12, 52, 255), width=14)
-    d.rectangle((14, 14, TW - 15, TH - 15), outline=gold, width=4)
-    d.rectangle((22, 22, TW - 23, TH - 23), outline=dgold, width=2)
-    for x, y in ((14, 14), (TW - 15, 14), (14, TH - 15), (TW - 15, TH - 15)): star(d, x, y, 15, gold)
+    d.rectangle((0, 0, TW - 1, TH - 1), outline=(26, 12, 52, 255), width=12)
+    d.rectangle((12, 12, TW - 13, TH - 13), outline=gold, width=3)
+    d.rectangle((18, 18, TW - 19, TH - 19), outline=dgold, width=1)
+    for x, y in ((12, 12), (TW - 13, 12), (12, TH - 13), (TW - 13, TH - 13)): star(d, x, y, 11, gold)
     def emblem(d, cx, cz):
-        d.ellipse((cx - 30, cz - 30, cx + 30, cz + 30), outline=gold, width=3)
-        star(d, cx, cz, 22, gold); d.ellipse((cx - 5, cz - 5, cx + 5, cz + 5), fill=(120, 60, 200, 255))
+        d.ellipse((cx - 20, cz - 20, cx + 20, cz + 20), outline=gold, width=3)
+        star(d, cx, cz, 15, gold); d.ellipse((cx - 4, cz - 4, cx + 4, cz + 4), fill=(120, 60, 200, 255))
     common_layout(im, gold, (20, 8, 44, 110), (255, 230, 150, 255), emblem)
     return im.convert("RGBA")
 
@@ -93,12 +93,12 @@ def purple():
 def neon():
     im = gradient((TW, TH), (0, 214, 255), (255, 58, 160))
     d = ImageDraw.Draw(im, "RGBA")
-    d.rectangle((0, 0, TW - 1, TH - 1), outline=(14, 12, 38, 255), width=16)
-    d.rectangle((16, 16, TW - 17, TH - 17), outline=(255, 255, 255, 235), width=3)
+    d.rectangle((0, 0, TW - 1, TH - 1), outline=(14, 12, 38, 255), width=12)
+    d.rectangle((12, 12, TW - 13, TH - 13), outline=(255, 255, 255, 235), width=2)
     def emblem(d, cx, cz):
-        d.ellipse((cx - 30, cz - 30, cx + 30, cz + 30), outline=(255, 255, 255, 255), width=4)
-        star(d, cx, cz, 22, (255, 255, 255, 255)); d.ellipse((cx - 5, cz - 5, cx + 5, cz + 5), fill=(14, 12, 38, 255))
-    glow_src = lambda gd: [gd.rounded_rectangle(b, radius=10, outline=(255, 255, 255, 255), width=5) for b in slot_boxes()]
+        d.ellipse((cx - 20, cz - 20, cx + 20, cz + 20), outline=(255, 255, 255, 255), width=4)
+        star(d, cx, cz, 15, (255, 255, 255, 255)); d.ellipse((cx - 4, cz - 4, cx + 4, cz + 4), fill=(14, 12, 38, 255))
+    glow_src = lambda gd: [gd.rounded_rectangle(b, radius=8, outline=(255, 255, 255, 255), width=5) for b in slot_boxes()]
     im = im.convert("RGBA"); im.alpha_composite(glow_layer(glow_src, 6, (255, 255, 255), 1.6)); im = im.convert("RGB")
     common_layout(im, (255, 255, 255), (14, 12, 38, 175), (255, 255, 255), emblem)
     return im.convert("RGBA")
@@ -106,7 +106,7 @@ def neon():
 MATS = {"classic": ("Classic Felt", classic), "purple": ("Royal Purple", purple), "neon": ("Neon Gradient", neon)}
 
 if __name__ == "__main__":
-    sheet = Image.new("RGBA", (3 * 170 + 20, 240 + 20), (30, 30, 34, 255))
+    sheet = Image.new("RGBA", (3 * 230 + 20, 240), (30, 30, 34, 255))
     for i, (k, (label, fn)) in enumerate(MATS.items()):
-        sheet.paste(fn().resize((160, 224), Image.LANCZOS), (10 + i * 170, 10))
+        sheet.paste(fn().resize((220, 220), Image.LANCZOS), (10 + i * 230, 10))
     sheet.save("mats-preview.png")

@@ -1,7 +1,9 @@
 cards-per-pack: 3
 max-cards-per-player: 3     # cards a player can have on the mat at once
-hover-height: 0.6           # how far the mannequin floats above its card (blocks)
-mannequin-scale: 0.45
+mannequin-hover: 0.3        # how far the mannequin floats above its card (blocks)
+mannequin-size: 0.28        # mannequin scale; 1.0 = player size
+turn-menu-delay-ticks: 40   # wait before the turn menu opens by itself (20 ticks = 1 s; -1 = never, use right-click or /sc turn)
+pause-after-attack-ticks: 30  # pause after a move before the next turn starts
 placeholder-skin: "Steve"   # used by cards whose skin is "placeholder". Put a textures.minecraft.net link of tools/placeholder_skin.png here
 resource-pack:
   url: ""                   # public link to sneakycards-resourcepack.zip
