@@ -189,27 +189,51 @@ im.save(path("assets", NS, "textures", "item", "pack.png")); sheet["pack"] = im
 wjson(path("assets", NS, "models", "item", "pack.json"), {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/pack"}})
 wjson(path("assets", NS, "items", "pack.json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/pack"}})
 
-# ---------- 3D binder ----------
-bt = Image.new("RGBA", (16,16)); d = ImageDraw.Draw(bt)
-d.rectangle((0,0,3,3), fill=(122,46,46)); d.rectangle((4,0,7,3), fill=(92,34,34))
-d.rectangle((8,0,11,3), fill=(242,239,230)); d.rectangle((12,0,15,3), fill=(214,170,70))
-for y in range(8,12): d.line([(8,y),(11,y)], fill=(207,202,187) if y % 2 else (242,239,230))
-bt.save(path("assets", NS, "textures", "item", "binder.png")); sheet["binder"] = bt
-def faces(u): return {f: {"uv": u, "texture": "#0"} for f in ("north","south","east","west","up","down")}
-LEATHER, SPINE, PAGES, GOLD = [0,0,4,4], [4,0,8,4], [8,0,12,4], [12,0,16,4]
+# ---------- 3D binder (colours match the binder menu in tools/gui.py) ----------
+# 64 x 64 atlas, 4 px per model unit. No two faces share a plane, so nothing z-fights (flickers).
+import random as _r
+LEA, LEA_D, LEA_L, GOLDC, PAGE, PAGE_L = (104,44,40), (64,24,22), (138,64,56), (214,176,112), (243,235,214), (226,214,188)
+bt = Image.new("RGBA", (64,64), (0,0,0,0)); d = ImageDraw.Draw(bt); rg = _r.Random(5)
+def leather(box, base):
+    d.rectangle(box, fill=base)
+    for _ in range((box[2]-box[0]+1)*(box[3]-box[1]+1)//7):
+        d.point((rg.randint(box[0],box[2]), rg.randint(box[1],box[3])), fill=rg.choice([LEA_D, LEA_L, (92,38,34)]))
+# front/back cover 40 x 56 at (0,0)
+leather((0,0,39,55), LEA)
+d.rectangle((0,0,39,55), outline=LEA_D)
+for x in range(4, 36, 3): d.point((x,3), fill=GOLDC); d.point((x,52), fill=GOLDC)          # stitching
+for y in range(4, 52, 3): d.point((3,y), fill=GOLDC); d.point((36,y), fill=GOLDC)
+for (cx, cy, sx, sy) in ((0,0,1,1),(39,0,-1,1),(0,55,1,-1),(39,55,-1,-1)):                 # gold corners
+    d.polygon([(cx,cy),(cx+6*sx,cy),(cx,cy+6*sy)], fill=GOLDC)
+d.rectangle((12,15,27,38), fill=GOLDC); d.rectangle((14,17,25,36), fill=PAGE)               # card emblem
+d.rectangle((16,19,23,28), fill=(196,96,90)); d.rectangle((16,30,23,31), fill=PAGE_L); d.rectangle((16,33,21,34), fill=PAGE_L)
+# spine 16 x 56 at (40,0) with metal ring bands like the menu
+leather((40,0,55,55), (84,34,30))
+for y in (8, 25, 42):
+    d.rectangle((40,y,55,y+5), fill=(196,200,208)); d.line([(40,y+1),(55,y+1)], fill=(236,238,242)); d.line([(40,y+5),(55,y+5)], fill=(110,114,122))
+# page edges 8 x 56 at (56,0)
+d.rectangle((56,0,63,55), fill=PAGE)
+for y in range(1,56,2): d.line([(56,y),(63,y)], fill=PAGE_L)
+# plain leather for thin cover edges at (40,56)
+d.rectangle((40,56,47,63), fill=LEA_D)
+bt.save(path("assets", NS, "textures", "item", "binder.png")); sheet["binder"] = bt.resize((16,16), Image.LANCZOS)
+COVER, SPINE_UV, PAGES_UV, EDGE = [0,0,10,14], [10,0,14,14], [14,0,16,14], [10,14,12,16]
+def fx(**kw): return {k: {"uv": v, "texture": "#0"} for k, v in kw.items()}
 wjson(path("assets", NS, "models", "item", "binder.json"), {
     "textures": {"0": f"{NS}:item/binder", "particle": f"{NS}:item/binder"},
     "elements": [
-        {"from": [3,1,6], "to": [13,15,7], "faces": faces(LEATHER)},
-        {"from": [4,2,7], "to": [12,14,9], "faces": faces(PAGES)},
-        {"from": [3,1,9], "to": [13,15,10], "faces": faces(LEATHER)},
-        {"from": [3,1,6], "to": [4,15,10], "faces": faces(SPINE)},
-        {"from": [5,5,10], "to": [11,11,10.2], "faces": faces(GOLD)}],
+        # spine (west); its east face is hidden against the covers, so it is left out
+        {"from": [3,1,6], "to": [4,15,10], "faces": fx(west=SPINE_UV, north=EDGE, south=EDGE, up=EDGE, down=EDGE)},
+        # back cover (north) and front cover (south); no west face (that is where the spine is)
+        {"from": [4,1,6], "to": [13,15,7], "faces": fx(north=COVER, south=EDGE, east=EDGE, up=EDGE, down=EDGE)},
+        {"from": [4,1,9], "to": [13,15,10], "faces": fx(south=COVER, north=EDGE, east=EDGE, up=EDGE, down=EDGE)},
+        # pages: inset from the cover edges; only the visible edges get faces
+        {"from": [4,1.5,7], "to": [12.5,14.5,9], "faces": fx(east=PAGES_UV, up=[14,0,16,2], down=[14,0,16,2])}],
     "display": {
-        "gui": {"rotation": [25,-35,0], "scale": [0.8,0.8,0.8]},
+        "gui": {"rotation": [20,-30,0], "scale": [0.85,0.85,0.85]},
         "firstperson_righthand": {"rotation": [0,-30,0], "translation": [0,3,2], "scale": [0.6,0.6,0.6]},
         "thirdperson_righthand": {"rotation": [0,0,0], "translation": [0,3,1], "scale": [0.5,0.5,0.5]},
-        "ground": {"rotation": [0,0,0], "scale": [0.5,0.5,0.5]},
+        "ground": {"rotation": [0,0,0], "translation": [0,2,0], "scale": [0.45,0.45,0.45]},
         "fixed": {"rotation": [0,180,0], "scale": [1,1,1]}}})
 wjson(path("assets", NS, "items", "binder.json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/binder"}})
 
