@@ -154,14 +154,19 @@ CARD_DISPLAY = {
     "fixed": ([0,0,0], [0,0,0], 1.0),
     "ground": ([0,0,0], [0,0,0], 0.5),
 }
-HEAD_T, HEAD_S = (0.0, 3.1, 0.55), (0.625, 0.625, 0.06)   # picture window centre is (8, 8.6) on the card face (z 8.25)
+# Measured in game: the player_head special model draws the head centred on x = z = 0 with y from -8 to 0
+# (model units), facing north. So the head is turned 180 degrees and moved to the picture window
+# centre (8, 8.6) just in front of the card face (z 8.25).
+HEAD_P0, HEAD_S, HEAD_TARGET = (0.0, -4.0, 0.0), (0.625, 0.625, 0.06), (8.0, 8.6, 8.55)
 def rot_y(v, deg):
     r = math.radians(deg); x, y, z = v
     return (x*math.cos(r) + z*math.sin(r), y, -x*math.sin(r) + z*math.cos(r))
+_local = rot_y(tuple(HEAD_S[i] * (HEAD_P0[i] - 8) for i in range(3)), 180)
+HEAD_T = tuple(HEAD_TARGET[i] - 8 - _local[i] for i in range(3))
 head_display = {}
 for ctx, (rot, tr, c) in CARD_DISPLAY.items():
     off = rot_y(HEAD_T, rot[1])
-    head_display[ctx] = {"rotation": rot, "translation": [round(tr[i] + c*off[i], 4) for i in range(3)],
+    head_display[ctx] = {"rotation": [rot[0], rot[1] + 180, rot[2]], "translation": [round(tr[i] + c*off[i], 4) for i in range(3)],
                          "scale": [round(c*HEAD_S[i], 4) for i in range(3)]}
 wjson(path("assets", NS, "models", "item", "card_head.json"), {
     "textures": {"particle": f"{NS}:item/card_back"}, "gui_light": "front", "display": head_display})
