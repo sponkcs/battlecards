@@ -2,7 +2,7 @@ name: SneakyCards
 version: ${version}
 main: dev.sneakycards.SneakyCardsPlugin
 api-version: '26.2'
-description: SneakyCards: collectible mannequin cards, binder, packs and a game mat.
+description: "SneakyCards: collectible mannequin cards, binder, packs and a game mat."
 commands:
   cardadmin:
     description: Card admin menu and tools
