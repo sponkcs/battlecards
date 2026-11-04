@@ -19,7 +19,7 @@ import java.util.function.Consumer;
  * Chest GUI for creating cards (9 columns x 6 rows):
  *  row 0: name, skin, collection, background (opens a submenu), randomize, reset, test pack, close, create
  *  rows 1-5: one stat per row (label, -5, -1, +1, +5)
- *  columns 6-7: rarity gems, slot 17: add-to-packs toggle
+ *  columns 6-7: rarity gems, slot 17: add-to-packs toggle, slot 26: slim/classic arms
  *  slots 42-43: move names, 51-52: move stat selectors
  */
 public final class AdminMenu implements InventoryHolder {
@@ -120,6 +120,9 @@ public final class AdminMenu implements InventoryHolder {
             set(slot, it.menu("gem_" + r.key(), r.label, r.color, 1,
                     d.rarity == r ? "Selected" : "Click to select", "Pack weight: " + r.weight), t -> d.rarity = r);
         }
+        set(26, it.menu("skin", d.slim ? "Arms: Slim" : "Arms: Classic", NamedTextColor.WHITE, 1,
+                d.slim ? "3-pixel arms (Alex style)" : "4-pixel arms (Steve style)",
+                "Match the skin's arm width", "Click to toggle"), t -> d.slim = !d.slim);
         set(17, it.menu(d.inPacks ? "pack_on" : "pack_off", "Add to packs", d.inPacks ? NamedTextColor.GREEN : NamedTextColor.RED, 1,
                 d.inPacks ? "ON: enters the pack pool" : "OFF: not in packs", "Click to toggle"), t -> d.inPacks = !d.inPacks);
 
@@ -145,7 +148,7 @@ public final class AdminMenu implements InventoryHolder {
         String id = Card.slug(d.name);
         if (id.isEmpty() || plugin.registry().get(id) != null) { err("A card with that name already exists."); return; }
         Card c = new Card(id, d.name, d.skin, d.collection, d.rarity, d.background, new EnumMap<>(d.stats),
-                List.of(new Move(d.moveNames[0], d.moveStats[0]), new Move(d.moveNames[1], d.moveStats[1])), d.inPacks);
+                List.of(new Move(d.moveNames[0], d.moveStats[0]), new Move(d.moveNames[1], d.moveStats[1])), d.inPacks, d.slim);
         plugin.registry().add(c);
         player.getInventory().addItem(plugin.items().card(c));
         player.sendMessage(Component.text("Created ", NamedTextColor.GREEN).append(Items.t(c.name(), c.rarity().color()))

@@ -9,6 +9,7 @@ public final class Draft {
     Rarity rarity = Rarity.COMMON;
     Background background = Background.SKYLINE;
     boolean inPacks = true;
+    boolean slim = false;
     final Map<Stat, Integer> stats = new EnumMap<>(Stat.class);
     final String[] moveNames = {"", ""};
     final Stat[] moveStats = {Stat.STRENGTH, Stat.LUCK};
@@ -16,7 +17,7 @@ public final class Draft {
     Draft() { reset(); }
 
     void reset() {
-        name = ""; skin = ""; collection = ""; rarity = Rarity.COMMON; background = Background.SKYLINE; inPacks = true;
+        name = ""; skin = ""; collection = ""; rarity = Rarity.COMMON; background = Background.SKYLINE; inPacks = true; slim = false;
         for (Stat s : Stat.values()) stats.put(s, s.defaultValue());
         moveNames[0] = ""; moveNames[1] = "";
         moveStats[0] = Stat.STRENGTH; moveStats[1] = Stat.LUCK;

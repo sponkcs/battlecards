@@ -127,9 +127,10 @@ public final class DisplayManager {
         String s = c.skin();
         if (s.equalsIgnoreCase("placeholder")) s = plugin.getConfig().getString("placeholder-skin", "Steve");
         if (s.startsWith("http")) {
-            String json = "{\"textures\":{\"SKIN\":{\"url\":\"" + s + "\"}}}";
+            String meta = c.slim() ? ",\"metadata\":{\"model\":\"slim\"}" : "";
+            String json = "{\"textures\":{\"SKIN\":{\"url\":\"" + s + "\"" + meta + "}}}";
             String value = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-            b.uuid(UUID.nameUUIDFromBytes(s.getBytes(StandardCharsets.UTF_8)));
+            b.uuid(UUID.nameUUIDFromBytes((s + c.slim()).getBytes(StandardCharsets.UTF_8)));
             b.addProperty(new ProfileProperty("textures", value));
         } else {
             b.name(s); // the server resolves the username

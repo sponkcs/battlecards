@@ -37,6 +37,7 @@ Players: `/sneakycards turn` reopens the menu (or right-click one of your cards)
 Sneak + right-click one of your cards before the battle starts to take it back.
 
 ## Skins
+Set **Arms** in `/cardadmin` (right-hand column) to Slim for skins with 3-pixel arms, or Classic for 4-pixel arms. It only matters for texture links; username skins already carry their arm type. In `cards.yml` it is `slim-arms: true|false`.
 A card with skin `placeholder` uses `placeholder-skin` from `config.yml`. The placeholder art is `tools/placeholder_skin.png`:
 upload it to mineskin.org and paste the resulting `textures.minecraft.net` link into the config.
 Skin links must be `https://textures.minecraft.net/texture/<hash>` (upload the PNG to mineskin.org to get one) or a username.

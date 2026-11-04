@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public record Card(String id, String name, String skin, String collection, Rarity rarity, Background background,
-                   Map<Stat, Integer> stats, List<Move> moves, boolean inPacks) {
+                   Map<Stat, Integer> stats, List<Move> moves, boolean inPacks, boolean slim) {
 
     private static final Pattern TEXTURE_URL = Pattern.compile("^https?://textures\\.minecraft\\.net/texture/[0-9a-fA-F]+$");
     private static final Pattern USERNAME = Pattern.compile("^[A-Za-z0-9_]{3,16}$");
@@ -37,6 +37,7 @@ public record Card(String id, String name, String skin, String collection, Rarit
         s.set("rarity", rarity.name());
         s.set("background", background.name());
         s.set("in-packs", inPacks);
+        s.set("slim-arms", slim);
         for (Stat st : Stat.values()) s.set("stats." + st.name().toLowerCase(Locale.ROOT), stat(st));
         for (int i = 0; i < moves.size(); i++) {
             s.set("moves." + i + ".name", moves.get(i).name());
@@ -60,6 +61,7 @@ public record Card(String id, String name, String skin, String collection, Rarit
         catch (IllegalArgumentException e) { r = Rarity.COMMON; }
         Background bg = Background.parse(s.getString("background", "SKYLINE"));
         return new Card(id, s.getString("name", id), s.getString("skin", "Steve"),
-                s.getString("collection", "none"), r, bg, stats, List.copyOf(moves), s.getBoolean("in-packs", true));
+                s.getString("collection", "none"), r, bg, stats, List.copyOf(moves), s.getBoolean("in-packs", true),
+                s.getBoolean("slim-arms", id.equals("vince_sunseeker"))); // demo skin is slim
     }
 }

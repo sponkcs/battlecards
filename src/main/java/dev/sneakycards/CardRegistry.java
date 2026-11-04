@@ -40,7 +40,7 @@ public final class CardRegistry {
         st.put(Stat.LUCK, 18); st.put(Stat.STRENGTH, 14); st.put(Stat.DEXTERITY, 22);
         st.put(Stat.MAGICING, 9); st.put(Stat.HEALTH, 40);
         cards.put("vince_sunseeker", new Card("vince_sunseeker", "Vince Sunseeker", "Steve", "off-duty",
-                Rarity.MYTHIC, Background.SKYLINE, st, List.of(new Move("Sunrise Strike", Stat.STRENGTH), new Move("Golden Hour", Stat.LUCK)), true));
+                Rarity.MYTHIC, Background.SKYLINE, st, List.of(new Move("Sunrise Strike", Stat.STRENGTH), new Move("Golden Hour", Stat.LUCK)), true, true));
     }
 
     public boolean add(Card c) {
