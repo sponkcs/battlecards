@@ -146,11 +146,13 @@ for bk in BACKGROUNDS:
 wjson(path("assets", NS, "models", "item", "card_base.json"), {
     "textures": {"particle": f"{NS}:item/card_back"},
     "elements": [{"from": [3,1,7.75], "to": [13,15,8.25], "faces": {
-        "north": {"uv": [0,0,10,14], "texture": "#front"},
-        "south": {"uv": [0,0,10,14], "texture": "#back"}}}],
+        # the GUI, hand and ground views look at the south face, and the plugin lays cards on the mat with south facing up
+        "south": {"uv": [0,0,10,14], "texture": "#front"},
+        "north": {"uv": [0,0,10,14], "texture": "#back"}}}],
     "display": {
         "gui": {"rotation": [0,0,0], "scale": [1.1,1.1,1.1]},
-        "firstperson_righthand": {"rotation": [0,0,0], "translation": [1,2,2], "scale": [0.55,0.55,0.55]},
+        "firstperson_righthand": {"rotation": [0,-10,0], "translation": [1.5,3,1], "scale": [0.38,0.38,0.38]},
+        "firstperson_lefthand": {"rotation": [0,10,0], "translation": [1.5,3,1], "scale": [0.38,0.38,0.38]},
         "thirdperson_righthand": {"rotation": [0,0,0], "translation": [0,3,1], "scale": [0.4,0.4,0.4]},
         "fixed": {"rotation": [0,0,0], "scale": [1,1,1]},
         "ground": {"rotation": [0,0,0], "scale": [0.5,0.5,0.5]}}})
