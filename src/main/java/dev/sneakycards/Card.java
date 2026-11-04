@@ -10,6 +10,15 @@ public record Card(String id, String name, String skin, String collection, Rarit
     private static final Pattern TEXTURE_URL = Pattern.compile("^https?://textures\\.minecraft\\.net/texture/[0-9a-fA-F]+$");
     private static final Pattern USERNAME = Pattern.compile("^[A-Za-z0-9_]{3,16}$");
 
+    /** Tidies pasted skin input: trims spaces/quotes/trailing slash; a bare 64-char texture hash becomes a full link. */
+    public static String cleanSkin(String s) {
+        if (s == null) return "";
+        s = s.trim().replaceAll("^[\"'<]+|[\"'>]+$", "").trim();
+        while (s.endsWith("/")) s = s.substring(0, s.length() - 1);
+        if (s.matches("^[0-9a-fA-F]{40,}$")) s = "http://textures.minecraft.net/texture/" + s;
+        return s;
+    }
+
     public static boolean validSkin(String s) {
         return s != null && (TEXTURE_URL.matcher(s).matches() || USERNAME.matcher(s).matches());
     }

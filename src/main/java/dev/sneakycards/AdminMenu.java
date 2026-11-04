@@ -75,7 +75,11 @@ public final class AdminMenu implements InventoryHolder {
                 t -> ask("Type the card name.", v -> d.name = v));
         set(1, it.menu("skin", "Skin", NamedTextColor.WHITE, 1, or(d.skin, "(not set)"),
                         "A textures.minecraft.net link or a username", "Click, then type in chat"),
-                t -> ask("Paste the skin link or type a username.", v -> d.skin = v));
+                t -> ask("Paste the skin link or type a username.", v -> {
+                    String c = Card.cleanSkin(v);
+                    if (Card.validSkin(c)) { d.skin = c; player.sendMessage(Component.text("Skin set: " + c, NamedTextColor.GREEN)); }
+                    else err("That isn't a skin link. Use the http://textures.minecraft.net/texture/... link from mineskin.org, or a username.");
+                }));
         set(2, it.menu("collection", "Collection", NamedTextColor.WHITE, 1, or(d.collection, "(not set)"), "Click, then type in chat"),
                 t -> ask("Type the collection name.", v -> d.collection = v));
         set(3, it.menu("bg_" + d.background.key(), "Background", NamedTextColor.WHITE, 1, d.background.label, "Click to choose"),
