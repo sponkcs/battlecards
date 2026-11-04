@@ -70,12 +70,13 @@ public final class Items {
         lore.add(t(c.rarity().label, c.rarity().color()));
         if (!c.title().isBlank()) lore.add(Component.text(c.title(), NamedTextColor.GRAY).decorate(TextDecoration.ITALIC));
         lore.add(t(c.background().label, NamedTextColor.DARK_GRAY));
+        lore.add(t("Type: " + Rules.type(c).label + "   Team cost: " + Rules.cost(c.rarity()), NamedTextColor.AQUA));
         lore.add(Component.empty());
         for (Stat s : Stat.values()) lore.add(t(s.label + ": " + c.stat(s), NamedTextColor.WHITE));
         lore.add(Component.empty());
-        for (Move mv : c.moves()) lore.add(t(mv.name() + " (" + mv.stat().label + " " + c.power(mv) + ")", NamedTextColor.YELLOW));
+        for (Move mv : c.moves()) lore.add(t(mv.name() + " (" + mv.stat().label + " " + c.power(mv) + ", " + Rules.moveCost(c, mv) + " energy)", NamedTextColor.YELLOW));
         lore.add(Component.empty());
-        lore.add(t("Right-click a block to play", NamedTextColor.DARK_GRAY));
+        lore.add(t("Right-click a mat slot to play", NamedTextColor.DARK_GRAY));
         m.lore(lore);
         m.getPersistentDataContainer().set(cardKey, PersistentDataType.STRING, c.id());
         it.setItemMeta(m);

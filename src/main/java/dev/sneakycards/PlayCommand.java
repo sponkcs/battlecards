@@ -25,11 +25,12 @@ public final class PlayCommand implements CommandExecutor, TabCompleter {
             default -> {
                 String[] rules = {
                         "SneakyCards rules",
-                        "1. Hold a card and right-click a slot on a game mat to play it. Fill all 3 slots on your side.",
-                        "2. The battle starts when both sides are full. Higher total Dexterity goes first. A tie is a coin flip.",
-                        "3. On your turn pick a card, one of its 2 moves, and an enemy card. The move deals damage equal to its stat.",
-                        "4. Luck is the chance for double damage. Luck 18 means an 18% chance.",
-                        "5. A card at 0 Health is knocked out. Knock out all 3 enemy cards to win.",
+                        "1. Play 3 different cards on your side of a mat. Team cost max 10 (Common 1 ... Mythic 6).",
+                        "2. Higher total Dexterity goes first (tie: coin flip). The other side starts with +1 energy.",
+                        "3. Each turn you gain 2 energy (max 6). Moves cost 1-3 energy; Luck moves refund 1. Or Rest for +1.",
+                        "4. Each card acts once per round: use all your cards before any can act again.",
+                        "5. Types: Strength > Magicing > Dexterity > Strength. Advantage x1.5, disadvantage x0.75.",
+                        "6. Luck is the crit chance (x1.5 damage). Knock out all 3 enemy cards to win.",
                         "Commands: /sneakycards turn (reopen the turn menu), /sneakycards forfeit, /binder"};
                 for (int i = 0; i < rules.length; i++) p.sendMessage(Component.text(rules[i], i == 0 ? NamedTextColor.GOLD : NamedTextColor.GRAY));
             }

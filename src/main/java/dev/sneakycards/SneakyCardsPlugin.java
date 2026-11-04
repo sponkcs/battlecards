@@ -24,6 +24,7 @@ public final class SneakyCardsPlugin extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         items = new Items(this);
+        rules = new Rules(this);
         registry = new CardRegistry(this);
         registry.load();
         binders = new BinderStore(this);
@@ -70,6 +71,8 @@ public final class SneakyCardsPlugin extends JavaPlugin {
         }
     }
 
+    private Rules rules;
+    public Rules rules() { return rules; }
     public Draft draft(Player p) { return drafts.computeIfAbsent(p.getUniqueId(), k -> new Draft()); }
     public CardRegistry registry() { return registry; }
     public BinderStore binders() { return binders; }

@@ -26,6 +26,7 @@ final class Mat {
     final DisplayManager.Placed[][] cards = new DisplayManager.Placed[2][3];
     State state = State.WAITING;
     int turn = -1;                        // side whose turn it is
+    final int[] energy = new int[2];
     boolean busy = false;                 // true while an attack animation plays
 
     Mat(Location center, float yaw, MatVariant variant) {

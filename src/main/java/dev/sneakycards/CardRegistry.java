@@ -23,7 +23,7 @@ public final class CardRegistry {
     void load() {
         cards.clear();
         dirty();
-        if (!file.exists()) { seedDemo(); save(); return; }
+        if (!file.exists()) { seedDemo(); for (Card c : starterSet()) cards.put(c.id(), c); save(); return; }
         ConfigurationSection sec = YamlConfiguration.loadConfiguration(file).getConfigurationSection("cards");
         if (sec == null) return;
         for (String id : sec.getKeys(false)) {
@@ -46,6 +46,57 @@ public final class CardRegistry {
         st.put(Stat.MAGICING, 9); st.put(Stat.HEALTH, 40);
         cards.put("vince_sunseeker", new Card("vince_sunseeker", "Vince Sunseeker", "Steve", "off-duty",
                 Rarity.MYTHIC, Background.SKYLINE, st, List.of(new Move("Sunrise Strike", Stat.STRENGTH), new Move("Golden Hour", Stat.LUCK)), true, true));
+    }
+
+    /** 15 test cards (placeholder skin) built for the balance rules: within their stat budgets, mixed types. */
+    public static List<Card> starterSet() {
+        List<Card> out = new ArrayList<>();
+        starter(out, "pip_the_paperboy", "Pip the Paperboy", "street kid", Rarity.COMMON, Background.SLUMS, 8, 10, 16, 4, 34,
+                "Paper Toss", Stat.DEXTERITY, "Lucky Penny", Stat.LUCK);
+        starter(out, "greta_grovekeeper", "Greta Grovekeeper", "forest warden", Rarity.COMMON, Background.GROVE, 6, 20, 8, 8, 30,
+                "Branch Swing", Stat.STRENGTH, "Sap Spell", Stat.MAGICING);
+        starter(out, "mossy_mike", "Mossy Mike", "goo gardener", Rarity.COMMON, Background.GOO, 10, 4, 6, 22, 30,
+                "Goo Glob", Stat.MAGICING, "Slip Up", Stat.LUCK);
+        starter(out, "tunnel_tess", "Tunnel Tess", "night miner", Rarity.COMMON, Background.MINES, 6, 20, 10, 4, 32,
+                "Pickaxe Poke", Stat.STRENGTH, "Rockslide Dodge", Stat.DEXTERITY);
+        starter(out, "ember_jinx", "Ember Jinx", "fire juggler", Rarity.UNCOMMON, Background.HELLFIRE, 10, 6, 12, 22, 28,
+                "Fireball", Stat.MAGICING, "Quick Toss", Stat.DEXTERITY);
+        starter(out, "rusty_rourke", "Rusty Rourke", "scrap boxer", Rarity.UNCOMMON, Background.SLUMS, 8, 22, 12, 2, 34,
+                "Haymaker", Stat.STRENGTH, "Jab", Stat.DEXTERITY);
+        starter(out, "wren_swiftfoot", "Wren Swiftfoot", "orchard runner", Rarity.UNCOMMON, Background.BLOSSOM, 10, 10, 18, 4, 36,
+                "Blossom Dash", Stat.DEXTERITY, "Petal Luck", Stat.LUCK);
+        starter(out, "sister_lumen", "Sister Lumen", "spire acolyte", Rarity.RARE, Background.SPIRE, 8, 2, 8, 32, 34,
+                "Starlight", Stat.MAGICING, "Lucky Prayer", Stat.LUCK);
+        starter(out, "brick_bronson", "Brick Bronson", "club bouncer", Rarity.RARE, Background.SKYLINE, 6, 28, 8, 2, 40,
+                "Body Slam", Stat.STRENGTH, "Shove", Stat.DEXTERITY);
+        starter(out, "nyx_nightwire", "Nyx Nightwire", "rooftop thief", Rarity.RARE, Background.SKYLINE, 12, 8, 20, 8, 36,
+                "Shadow Step", Stat.DEXTERITY, "Pickpocket", Stat.LUCK);
+        starter(out, "gorrim_deepdelve", "Gorrim Deepdelve", "dwarf foreman", Rarity.EPIC, Background.MINES, 8, 30, 6, 6, 40,
+                "Mountain Breaker", Stat.STRENGTH, "Ale Toss", Stat.LUCK);
+        starter(out, "vela_thornwhisper", "Vela Thornwhisper", "grove druid", Rarity.EPIC, Background.GROVE, 10, 4, 12, 30, 34,
+                "Thorn Wall", Stat.MAGICING, "Vine Lash", Stat.DEXTERITY);
+        starter(out, "infernus_rex", "Infernus Rex", "pit champion", Rarity.LEGENDARY, Background.HELLFIRE, 10, 32, 10, 8, 36,
+                "Hellfire Fist", Stat.STRENGTH, "Brimstone", Stat.MAGICING);
+        starter(out, "archmagus_orrin", "Arch-Magus Orrin", "spire master", Rarity.LEGENDARY, Background.SPIRE, 12, 4, 10, 36, 34,
+                "Arcane Storm", Stat.MAGICING, "Blink", Stat.DEXTERITY);
+        starter(out, "silk_phantom", "Silk Phantom", "masked duelist", Rarity.MYTHIC, Background.BLOSSOM, 12, 14, 28, 10, 40,
+                "Thousand Cuts", Stat.DEXTERITY, "Fortune's Edge", Stat.LUCK);
+        return out;
+    }
+
+    private static void starter(List<Card> out, String id, String name, String title, Rarity r, Background bg,
+                                int luck, int str, int dex, int mag, int hp, String m1, Stat s1, String m2, Stat s2) {
+        Map<Stat, Integer> st = new EnumMap<>(Stat.class);
+        st.put(Stat.LUCK, luck); st.put(Stat.STRENGTH, str); st.put(Stat.DEXTERITY, dex); st.put(Stat.MAGICING, mag); st.put(Stat.HEALTH, hp);
+        out.add(new Card(id, name, "placeholder", title, r, bg, st, List.of(new Move(m1, s1), new Move(m2, s2)), true, false));
+    }
+
+    /** Adds any starter cards that are missing. Returns how many were added. */
+    public int addStarterSet() {
+        int n = 0;
+        for (Card c : starterSet()) if (!cards.containsKey(c.id())) { cards.put(c.id(), c); n++; }
+        if (n > 0) { dirty(); save(); }
+        return n;
     }
 
     public boolean add(Card c) {

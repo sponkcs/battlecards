@@ -156,6 +156,16 @@ public final class BattleManager {
         if (m.players[side] != null && !m.players[side].equals(me)) { say(p, nameOf(m.players[side]) + " is playing on this side.", NamedTextColor.RED); return; }
         if (m.players[1 - side] != null && m.players[1 - side].equals(me)) { say(p, "You are already playing on the other side.", NamedTextColor.RED); return; }
         if (m.cards[side][col] != null) { say(p, "That slot is taken. Sneak + right-click a card to pick it up.", NamedTextColor.RED); return; }
+        int cost = Rules.cost(card.rarity()), cap = plugin.rules().teamCostCap();
+        for (var c : m.cards[side]) if (c != null) {
+            if (c.card.id().equals(card.id())) { say(p, "Your team already has " + card.name() + ". No duplicate cards.", NamedTextColor.RED); return; }
+            cost += Rules.cost(c.card.rarity());
+        }
+        if (cost > cap) {
+            say(p, "Team cost would be " + cost + "/" + cap + ". " + card.rarity().label + " cards cost " + Rules.cost(card.rarity())
+                    + " (Common 1 ... Mythic 6). Swap in cheaper cards.", NamedTextColor.RED);
+            return;
+        }
 
         boolean claimed = m.players[side] == null;
         DisplayManager.Placed pl = displays().place(p, card, m.slotTop(side, col), m.sideYaw(side));
@@ -171,8 +181,8 @@ public final class BattleManager {
             say(p, "Your team is ready. Waiting for an opponent to fill the other side.", NamedTextColor.GREEN);
             if (m.players[1 - side] != null) say(Bukkit.getPlayer(m.players[1 - side]), nameOf(me) + "'s team is ready.", NamedTextColor.GRAY);
         } else {
-            int have = 0; for (var c : m.cards[side]) if (c != null) have++;
-            say(p, have + " of 3 cards placed.", NamedTextColor.GRAY);
+            int have = 0, spent = 0; for (var c : m.cards[side]) if (c != null) { have++; spent += Rules.cost(c.card.rarity()); }
+            say(p, have + " of 3 cards placed. Team cost " + spent + "/" + cap + ".", NamedTextColor.GRAY);
         }
     }
 
@@ -237,6 +247,8 @@ public final class BattleManager {
 
     private void start(Mat m) {
         m.state = Mat.State.FIGHTING;
+        m.energy[0] = 0; m.energy[1] = 0;
+        for (var row : m.cards) for (var c : row) if (c != null) c.acted = false;
         int d0 = dexterity(m, 0), d1 = dexterity(m, 1);
         int first;
         boolean coin = false;
@@ -244,6 +256,7 @@ public final class BattleManager {
         else if (d1 > d0) first = 1;
         else { first = rng.nextBoolean() ? 0 : 1; coin = true; }
         m.turn = first;
+        m.energy[1 - first] = plugin.rules().secondPlayerBonus();   // going second starts with a little extra energy
         String who = nameOf(m.players[first]);
         Component line = coin
                 ? Component.text("Dexterity is tied at " + d0 + ". Coin flip: " + who + " goes first.", NamedTextColor.GOLD)
@@ -260,11 +273,20 @@ public final class BattleManager {
     private void beginTurn(Mat m) {
         m.busy = false;
         final int side = m.turn;
+        Rules rules = plugin.rules();
+        m.energy[side] = Math.min(rules.energyMax(), m.energy[side] + rules.energyPerTurn());
+        boolean anyReady = false;
+        for (var c : m.cards[side]) if (c != null && !c.ko && !c.acted) anyReady = true;
+        if (!anyReady) {
+            for (var c : m.cards[side]) if (c != null) c.acted = false;
+            Player owner = Bukkit.getPlayer(m.players[side]);
+            if (owner != null) say(owner, "New round: all your cards can act again.", NamedTextColor.AQUA);
+        }
         Player cur = Bukkit.getPlayer(m.players[side]);
         Player other = m.players[1 - side] == null ? null : Bukkit.getPlayer(m.players[1 - side]);
         if (cur != null) {
             say(cur, "Your turn! Choose a card, a move and a target. (Right-click your card or use /sneakycards turn to open the menu.)", NamedTextColor.GREEN);
-            cur.showTitle(Title.title(Component.empty(), Component.text("Your turn", NamedTextColor.GREEN),
+            cur.showTitle(Title.title(Component.empty(), Component.text("Your turn  ⚡ " + m.energy[side] + "/" + rules.energyMax(), NamedTextColor.GREEN),
                     Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1200), Duration.ofMillis(300))));
             cur.playSound(cur.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.7f, 1.4f);
             long delay = plugin.getConfig().getLong("turn-menu-delay-ticks", 40);
@@ -289,9 +311,14 @@ public final class BattleManager {
     public void attack(Player p, Mat m, DisplayManager.Placed att, Move mv, DisplayManager.Placed tgt) {
         if (m.state != Mat.State.FIGHTING || m.busy || m.sideOf(p.getUniqueId()) != m.turn) return;
         if (att.ko || tgt.ko || att.side != m.turn || tgt.side == m.turn) return;
+        if (att.acted) { say(p, att.card.name() + " already acted this round. Use your other cards first.", NamedTextColor.YELLOW); return; }
+        int cost = Rules.moveCost(att.card, mv);
+        if (m.energy[m.turn] < cost) { say(p, "Not enough energy: " + mv.name() + " costs " + cost + ", you have " + m.energy[m.turn] + ".", NamedTextColor.YELLOW); return; }
         m.busy = true;
+        m.energy[m.turn] = Math.min(plugin.rules().energyMax(), m.energy[m.turn] - cost + Rules.refund(mv));
+        att.acted = true;
         boolean crit = rng.nextInt(100) < Math.min(100, att.card.stat(Stat.LUCK));
-        int dmg = att.card.power(mv) * (crit ? 2 : 1);
+        int dmg = plugin.rules().damage(att.card, mv, tgt.card, crit);
         displays().attack(att, tgt, mv, () -> impact(m, att, tgt, mv, dmg, crit), () -> afterAttack(m));
     }
 
@@ -308,6 +335,9 @@ public final class BattleManager {
                 .append(Component.text(" used " + mv.name() + " on ", NamedTextColor.WHITE))
                 .append(Component.text(tgt.card.name(), tgt.card.rarity().color()))
                 .append(Component.text(" for " + dmg + " damage" + (crit ? " (critical hit!)" : "") + ".", crit ? NamedTextColor.GOLD : NamedTextColor.WHITE));
+        double mult = plugin.rules().typeMultiplier(mv, tgt.card);
+        if (mult > 1) msg = msg.append(Component.text(" Super effective!", NamedTextColor.GREEN));
+        else if (mult < 1) msg = msg.append(Component.text(" Not very effective.", NamedTextColor.GRAY));
         tell(m, msg);
         if (tgt.hp <= 0) {
             // let the hit animation play before the card goes down
@@ -358,6 +388,16 @@ public final class BattleManager {
             if (p != null && p.getOpenInventory().getTopInventory().getHolder() instanceof BattleMenu) p.closeInventory();
         }
         Bukkit.getScheduler().runTaskLater(plugin, () -> { if (mats.contains(m)) resetMat(m); }, 120L);
+    }
+
+    /** Skip the turn to bank extra energy. */
+    public void rest(Player p) {
+        Mat m = byPlayer.get(p.getUniqueId());
+        if (m == null || m.state != Mat.State.FIGHTING || m.busy || m.sideOf(p.getUniqueId()) != m.turn) return;
+        m.busy = true;
+        m.energy[m.turn] = Math.min(plugin.rules().energyMax(), m.energy[m.turn] + plugin.rules().restBonus());
+        tell(m, Component.text(p.getName() + " rests and gains " + plugin.rules().restBonus() + " extra energy.", NamedTextColor.GRAY));
+        afterAttack(m);
     }
 
     public void forfeit(Player p) {

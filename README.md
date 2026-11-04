@@ -32,13 +32,15 @@ stands at the near end. Sneak + right-click the middle of an empty mat to pick i
 Mats are not saved: they disappear on restart or when the chunk unloads, and cards on them go back to their owners.
 
 ## How a battle works
-Timing is set in `config.yml`: `turn-menu-delay-ticks` (default 2 s before the turn menu opens) and `pause-after-attack-ticks`.
-Upgrading from 0.1.x? Delete the old `hover-height` and `mannequin-scale` lines from config.yml; the new keys are `mannequin-hover` and `mannequin-size`.
-1. Hold a card and right-click a slot on the mat. The first card claims that side. Fill all 3 slots on your side.
-2. The battle starts when both sides are full. The side with the higher total Dexterity goes first; a tie is a coin flip.
-3. On your turn a menu opens: click one of your cards, one of its 2 moves, then an enemy card. The move deals damage equal to its stat.
-4. The attacking card's Luck is its percent chance to deal double damage.
-5. A card at 0 Health is knocked out. Knock out all 3 enemy cards to win. Cards go back to their owners afterwards.
+1. Each side plays 3 **different** cards. Team cost is capped at 10: Common 1, Uncommon 2, Rare 3, Epic 4, Legendary 5, Mythic 6.
+2. The battle starts when both sides are full. Higher total Dexterity goes first (tie: coin flip); the other side starts with +1 energy.
+3. At the start of your turn you gain 2 energy (max 6). Moves cost energy by power: 1 (up to 12), 2 (up to 24), 3 (above). Luck moves refund 1. Rest skips the turn for +1 extra energy.
+4. Each card acts once per round: all your living cards must act before any can act again.
+5. Types: a card's type is its highest of Strength / Dexterity / Magicing. Strength beats Magicing, Magicing beats Dexterity, Dexterity beats Strength (x1.5 / x0.75).
+6. Damage = move power x 0.6 x type multiplier. Luck is the crit chance (x1.5). Knock out all 3 enemy cards to win.
+7. Stat budget: in /cardadmin the five stats add up to at most Common 72, Uncommon 78, Rare 84, Epic 90, Legendary 96, Mythic 104.
+All numbers are in the `rules:` section of config.yml. `/cardadmin seed` adds 15 balanced test cards (placeholder skin).
+Timing is set in `config.yml`: `turn-menu-delay-ticks` and `pause-after-attack-ticks`.
 
 Players: `/sneakycards turn` reopens the menu (or right-click one of your cards), `/sneakycards forfeit`, `/sneakycards help`.
 Sneak + right-click one of your cards before the battle starts to take it back.

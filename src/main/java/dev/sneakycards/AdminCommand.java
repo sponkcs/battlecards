@@ -38,6 +38,10 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 plugin.registry().all().forEach(card -> s.sendMessage(Component.text(" • " + card.id() + " (" + card.rarity().label + ", " + (card.title().isBlank() ? "no title" : card.title()) + ")", NamedTextColor.GRAY)));
             }
             case "mat" -> mat(s, a);
+            case "seed" -> {
+                int n = plugin.registry().addStarterSet();
+                say(s, n == 0 ? "All 15 starter cards are already there." : "Added " + n + " starter cards (placeholder skin) to the pack pool.");
+            }
             case "cards" -> { if (s instanceof Player p) new CardListMenu(plugin, p).open(); else say(s, "Players only."); }
             case "edit" -> {
                 if (!(s instanceof Player p)) { say(s, "Players only."); return true; }
@@ -126,7 +130,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
-        if (a.length == 1) return List.of("give", "binder", "mat", "cards", "edit", "delete", "place", "move", "hurt", "clear", "list", "pack", "reload");
+        if (a.length == 1) return List.of("give", "binder", "mat", "seed", "cards", "edit", "delete", "place", "move", "hurt", "clear", "list", "pack", "reload");
         if (a.length == 2 && (a[0].equalsIgnoreCase("place") || a[0].equalsIgnoreCase("edit") || a[0].equalsIgnoreCase("delete"))) return plugin.registry().all().stream().map(Card::id).toList();
         if (a.length == 2 && a[0].equalsIgnoreCase("mat")) return List.of("classic", "purple", "neon", "remove");
         if (a.length == 2 && a[0].equalsIgnoreCase("move")) return List.of("1", "2");

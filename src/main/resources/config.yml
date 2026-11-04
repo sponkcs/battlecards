@@ -10,3 +10,13 @@ resource-pack:
   url: ""                   # public link to sneakycards-resourcepack.zip
   sha1: ""                  # 40-character sha1 of the zip (printed by tools/make_pack.py)
   required: false
+rules:
+  team-cost-cap: 10            # rarity costs: Common 1, Uncommon 2, Rare 3, Epic 4, Legendary 5, Mythic 6
+  energy-per-turn: 2
+  energy-max: 6
+  second-player-bonus-energy: 1  # the side that goes second starts with this much energy
+  rest-bonus-energy: 1         # extra energy for skipping a turn
+  damage-scale: 0.6            # damage = move power x this x type multiplier (x crit)
+  crit-multiplier: 1.5
+  type-advantage: 1.5          # Strength > Magicing > Dexterity > Strength
+  type-disadvantage: 0.75

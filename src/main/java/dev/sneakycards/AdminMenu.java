@@ -85,13 +85,7 @@ public final class AdminMenu implements InventoryHolder {
                 t -> ask("Type the card's title, for example off-duty. Type 'none' to clear it.", v -> d.title = v.equalsIgnoreCase("none") ? "" : v));
         set(3, it.menu("bg_" + d.background.key(), "Background", NamedTextColor.WHITE, 1, d.background.label, "Click to choose"),
                 t -> Bukkit.getScheduler().runTask(plugin, () -> new BackgroundMenu(plugin, player).open()));
-        set(4, it.menu("random", "Randomize stats", NamedTextColor.AQUA, 1, "Rolls stats for the chosen rarity"), t -> {
-            int base = 5 + d.rarity.ordinal() * 6;
-            for (Stat s : Stat.values()) {
-                int v = base + RNG.nextInt(25);
-                d.stats.put(s, Math.min(99, s == Stat.HEALTH ? v + 15 : v));
-            }
-        });
+        set(4, it.menu("random", "Randomize stats", NamedTextColor.AQUA, 1, "Spends the rarity's full stat budget at random"), t -> randomize());
         set(5, it.menu("reset", d.editing == null ? "Reset" : "Stop editing", NamedTextColor.GRAY, 1,
                 d.editing == null ? "Clears the form" : "Clears the form and goes back to making a new card"), t -> d.reset());
         set(6, it.menu("gift", "Give test pack", NamedTextColor.LIGHT_PURPLE, 1, "Gives you one pack"),
@@ -120,14 +114,26 @@ public final class AdminMenu implements InventoryHolder {
             Stat s = stats[r];
             int base = (r + 1) * 9;
             int v = d.stats.get(s);
-            set(base, it.menu(s.icon, s.label, NamedTextColor.WHITE, v, "Current: " + v), null);
+            set(base, it.menu(s.icon, s.label, NamedTextColor.WHITE, Math.max(1, Math.min(99, v)), "Current: " + v,
+                    "Allowed: " + Rules.min(s) + " to " + Rules.max(s)), null);
             for (int k = 0; k < 4; k++) {
                 int delta = deltas[k];
                 set(base + 1 + k, it.menu(icons[k], s.label + " " + (delta > 0 ? "+" : "") + delta,
                         delta < 0 ? NamedTextColor.RED : NamedTextColor.GREEN, Math.abs(delta), "Click to change"),
-                        t -> d.stats.put(s, Math.max(0, Math.min(99, d.stats.get(s) + delta))));
+                        t -> {
+                            int cur = d.stats.get(s), left = Rules.budget(d.rarity) - Rules.total(d.stats);
+                            int want = delta > 0 ? Math.min(delta, Math.max(0, left)) : delta;      // can't spend past the budget
+                            d.stats.put(s, Math.max(Rules.min(s), Math.min(Rules.max(s), cur + want)));
+                        });
             }
         }
+        int used = Rules.total(d.stats), budget = Rules.budget(d.rarity);
+        boolean over = used > budget;
+        set(14, it.menu(over ? "close" : "info", "Stat points: " + used + "/" + budget, over ? NamedTextColor.RED : NamedTextColor.AQUA,
+                Math.max(1, Math.min(64, budget - used)),
+                over ? "Over budget! Lower some stats to save." : (budget - used) + " points left to spend",
+                d.rarity.label + " budget: " + budget + "   Team cost: " + Rules.cost(d.rarity),
+                "Type (highest of Str/Dex/Mag) decides match-ups"), null);
 
         Rarity[] rs = Rarity.values();
         for (int k = 0; k < rs.length; k++) {
@@ -154,12 +160,31 @@ public final class AdminMenu implements InventoryHolder {
         }
     }
 
+    /** Spends the full budget: Health gets 30-40%, the rest is spread over the other stats with one favoured. */
+    private void randomize() {
+        int budget = Rules.budget(d.rarity);
+        int hp = Math.max(Rules.min(Stat.HEALTH), Math.min(Rules.max(Stat.HEALTH), (int) Math.round(budget * (0.30 + RNG.nextDouble() * 0.10))));
+        d.stats.put(Stat.HEALTH, hp);
+        Stat[] others = {Stat.LUCK, Stat.STRENGTH, Stat.DEXTERITY, Stat.MAGICING};
+        for (Stat s : others) d.stats.put(s, Rules.min(s));
+        Stat fav = others[1 + RNG.nextInt(3)];
+        int left = budget - Rules.total(d.stats), guard = 0;
+        while (left > 0 && guard++ < 1000) {
+            Stat s = RNG.nextInt(3) == 0 ? fav : others[RNG.nextInt(4)];
+            if (d.stats.get(s) < Rules.max(s)) { d.stats.put(s, d.stats.get(s) + 1); left--; }
+        }
+    }
+
     private void err(String m) { player.sendMessage(Component.text(m, NamedTextColor.RED)); }
 
     private void create() {
         if (d.name.isBlank()) { err("Set a card name first."); return; }
         if (!Card.validSkin(d.skin)) { err("Set a skin: a textures.minecraft.net link or a username."); return; }
         if (d.moveNames[0].isBlank() || d.moveNames[1].isBlank()) { err("Each card needs 2 moves. Name both."); return; }
+        if (Rules.total(d.stats) > Rules.budget(d.rarity)) {
+            err("Stats use " + Rules.total(d.stats) + " points but a " + d.rarity.label + " card may use " + Rules.budget(d.rarity) + ". Lower some stats.");
+            return;
+        }
         if (d.editing != null) {
             Card old = plugin.registry().get(d.editing);
             if (old == null) { err("That card was deleted. Reset the form to make a new one."); return; }
