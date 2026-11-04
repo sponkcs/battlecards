@@ -39,9 +39,16 @@ public final class BattleMenu implements InventoryHolder {
         Items it = plugin.items();
         if (pl == null) return it.menu("blank", " ", NamedTextColor.GRAY, 1);
         if (pl.ko) return it.menu("close", pl.card.name() + " (knocked out)", NamedTextColor.DARK_GRAY, 1);
-        if (pl.side == side && pl.acted)
-            return it.menu("blank", pl.card.name() + " (already acted)", NamedTextColor.DARK_GRAY, 1,
-                    "Health: " + pl.hp + "/" + pl.maxHp, "Can act again once your other cards have");
+        if (pl.side == side && pl.acted) {
+            ItemStack done = it.card(pl.card);
+            done.editMeta(m -> {
+                m.displayName(Items.t(pl.card.name() + " (already acted)", NamedTextColor.DARK_GRAY));
+                m.lore(List.of(Items.t("Health: " + pl.hp + "/" + pl.maxHp, NamedTextColor.GRAY),
+                        Items.t("It can act again after", NamedTextColor.GRAY),
+                        Items.t("your other cards have acted.", NamedTextColor.GRAY)));
+            });
+            return done;
+        }
         ItemStack s = it.card(pl.card);
         s.editMeta(m -> {
             List<Component> lore = new ArrayList<>(m.lore() == null ? List.<Component>of() : m.lore());
