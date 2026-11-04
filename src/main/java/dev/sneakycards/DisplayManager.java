@@ -95,7 +95,7 @@ public final class DisplayManager {
             t.setBillboard(Display.Billboard.CENTER);
             t.setBackgroundColor(Color.fromARGB(120, 10, 10, 16));
             t.setPersistent(false);
-            t.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.4f, 0.4f, 0.4f), new AxisAngle4f()));
+            t.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.35f, 0.35f, 0.35f), new AxisAngle4f()));
         });
         p.preview = w.spawn(top.clone().add(0, headTop + 0.55, 0), TextDisplay.class, t -> {
             t.text(previewText(card));
@@ -113,7 +113,9 @@ public final class DisplayManager {
 
     /** The card lying flat on the mat. lift raises it (blocks); width 1 = normal, near 0 = edge-on (mid-flip). */
     private static Transformation flat(float lift, float width) {
-        return new Transformation(new Vector3f(0, lift, 0), new AxisAngle4f((float) Math.toRadians(-90), 1, 0, 0),
+        // ItemDisplay turns its item 180 degrees around Y, so +90 about X puts the card's front face up
+        // with its top pointing away from the owner (readable from their seat).
+        return new Transformation(new Vector3f(0, lift, 0), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0),
                 new Vector3f(1.08f * width, 1.08f, 1.08f), new AxisAngle4f());
     }
 
@@ -235,17 +237,13 @@ public final class DisplayManager {
         return b.build();
     }
 
+    /** Small label above the mannequin: just the health number (the name is in the look-at preview). */
     private Component hpLine(Placed p) {
-        if (p.faceDown) return Component.text("Face-down card", NamedTextColor.GRAY);
-        Component name = Component.text(p.card.name(), p.card.rarity().color());
-        if (p.ko) return name.appendNewline().append(Component.text("Knocked out", NamedTextColor.RED));
+        if (p.faceDown) return Component.text("?", NamedTextColor.GRAY);
+        if (p.ko) return Component.text("KO", NamedTextColor.RED);
         double r = p.hp / (double) Math.max(1, p.maxHp);
-        int filled = (int) Math.ceil(r * 10);
         NamedTextColor c = r > 0.5 ? NamedTextColor.GREEN : r > 0.25 ? NamedTextColor.YELLOW : NamedTextColor.RED;
-        return name.appendNewline()
-                .append(Component.text("❤ " + p.hp + "/" + p.maxHp + " ", c))
-                .append(Component.text("█".repeat(filled), c))
-                .append(Component.text("█".repeat(10 - filled), NamedTextColor.DARK_GRAY));
+        return Component.text("❤ " + p.hp, c);
     }
 
     public void refreshHp(Placed p) { if (p.hpText != null && p.hpText.isValid()) p.hpText.text(hpLine(p)); }
