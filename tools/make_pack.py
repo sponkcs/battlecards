@@ -115,9 +115,7 @@ def card_front(rc, mythic, scn):
     d.rectangle((6,48,33,50), fill=(60,20,25)); d.rectangle((6,48,26,50), fill=(220,50,60))
     im = base.resize((80,112), Image.NEAREST)
     im.paste(scn, (10,24))
-    sd = ImageDraw.Draw(im)   # neutral character silhouette; the real character is the hovering mannequin
-    sd.rectangle((35,44,44,53), fill=(34,34,44), outline=(90,90,110)); sd.rectangle((33,54,46,70), fill=(34,34,44), outline=(90,90,110))
-    sd.rectangle((33,71,39,77), fill=(26,26,34)); sd.rectangle((40,71,46,77), fill=(26,26,34))
+    # the character's head is drawn on top by the item model (player_head layer using the item's profile)
     return im
 def card_back():
     im = Image.new("RGBA", (40,56)); d = ImageDraw.Draw(im)
@@ -143,6 +141,31 @@ for bk in BACKGROUNDS:
         art = card_front(c, k == "mythic", scn); save_card(f"card_{bk}_{k}", art)
         if k == "mythic": sheet[f"card_{bk}"] = art
 
+# The character's head: a flattened player head placed over the card's picture window.
+# Each display context = the card's own transform followed by the head offset (HEAD_T, HEAD_S),
+# so the head moves with the card in the GUI, hands, on the ground and on the mat.
+import math
+CARD_DISPLAY = {
+    "gui": ([0,0,0], [0,0,0], 1.1),
+    "firstperson_righthand": ([0,-10,0], [1.5,3,1], 0.38),
+    "firstperson_lefthand": ([0,10,0], [1.5,3,1], 0.38),
+    "thirdperson_righthand": ([0,0,0], [0,3,1], 0.4),
+    "thirdperson_lefthand": ([0,0,0], [0,3,1], 0.4),
+    "fixed": ([0,0,0], [0,0,0], 1.0),
+    "ground": ([0,0,0], [0,0,0], 0.5),
+}
+HEAD_T, HEAD_S = (0.0, 3.1, 0.55), (0.625, 0.625, 0.06)   # picture window centre is (8, 8.6) on the card face (z 8.25)
+def rot_y(v, deg):
+    r = math.radians(deg); x, y, z = v
+    return (x*math.cos(r) + z*math.sin(r), y, -x*math.sin(r) + z*math.cos(r))
+head_display = {}
+for ctx, (rot, tr, c) in CARD_DISPLAY.items():
+    off = rot_y(HEAD_T, rot[1])
+    head_display[ctx] = {"rotation": rot, "translation": [round(tr[i] + c*off[i], 4) for i in range(3)],
+                         "scale": [round(c*HEAD_S[i], 4) for i in range(3)]}
+wjson(path("assets", NS, "models", "item", "card_head.json"), {
+    "textures": {"particle": f"{NS}:item/card_back"}, "gui_light": "front", "display": head_display})
+
 wjson(path("assets", NS, "models", "item", "card_base.json"), {
     "textures": {"particle": f"{NS}:item/card_back"},
     "elements": [{"from": [3,1,7.75], "to": [13,15,8.25], "faces": {
@@ -151,17 +174,16 @@ wjson(path("assets", NS, "models", "item", "card_base.json"), {
         "north": {"uv": [0,0,10,14], "texture": "#back"}}}],
     "display": {
         "gui": {"rotation": [0,0,0], "scale": [1.1,1.1,1.1]},
-        "firstperson_righthand": {"rotation": [0,-10,0], "translation": [1.5,3,1], "scale": [0.38,0.38,0.38]},
-        "firstperson_lefthand": {"rotation": [0,10,0], "translation": [1.5,3,1], "scale": [0.38,0.38,0.38]},
-        "thirdperson_righthand": {"rotation": [0,0,0], "translation": [0,3,1], "scale": [0.4,0.4,0.4]},
-        "fixed": {"rotation": [0,0,0], "scale": [1,1,1]},
-        "ground": {"rotation": [0,0,0], "scale": [0.5,0.5,0.5]}}})
+        **{ctx: {"rotation": rot, "translation": tr, "scale": [c, c, c]} for ctx, (rot, tr, c) in CARD_DISPLAY.items() if ctx != "gui"}},
+    "gui_light": "front"})
 for bk in BACKGROUNDS:
     for k in RARITIES:
         n = f"card_{bk}_{k}"
         wjson(path("assets", NS, "models", "item", n + ".json"),
               {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/{n}", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/{n}"}})
-        wjson(path("assets", NS, "items", n + ".json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/{n}"}})
+        wjson(path("assets", NS, "items", n + ".json"), {"model": {"type": "minecraft:composite", "models": [
+            {"type": "minecraft:model", "model": f"{NS}:item/{n}"},
+            {"type": "minecraft:special", "base": f"{NS}:item/card_head", "model": {"type": "minecraft:player_head"}}]}})
 
 # ---------- game mats: a flat square plate 16 x 16 model units; the plugin scales it (3, 1, 3) to 3 x 3 blocks ----------
 from mats import MATS

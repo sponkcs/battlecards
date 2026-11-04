@@ -86,7 +86,7 @@ public final class DisplayManager {
             i.setResponsive(true);
             i.setPersistent(false);
         });
-        ResolvableProfile profile = profile(card);
+        ResolvableProfile profile = plugin.items().profile(card);
         Location manLoc = top.clone().add(0, hover, 0);
         manLoc.setYaw(yaw);
         p.man = w.spawn(manLoc, Mannequin.class, m -> {
@@ -127,22 +127,6 @@ public final class DisplayManager {
     private double scale() { return plugin.getConfig().getDouble("mannequin-size", 0.28); }
     /** Animation distances were tuned for a 0.45 mannequin; shrink them with the mannequin. */
     private double k() { return scale() / 0.45; }
-
-    private ResolvableProfile profile(Card c) {
-        var b = ResolvableProfile.resolvableProfile();
-        String s = c.skin();
-        if (s.equalsIgnoreCase("placeholder")) s = plugin.getConfig().getString("placeholder-skin", "Steve");
-        if (s.startsWith("http")) {
-            String meta = c.slim() ? ",\"metadata\":{\"model\":\"slim\"}" : "";
-            String json = "{\"textures\":{\"SKIN\":{\"url\":\"" + s + "\"" + meta + "}}}";
-            String value = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-            b.uuid(UUID.nameUUIDFromBytes((s + c.slim()).getBytes(StandardCharsets.UTF_8)));
-            b.addProperty(new ProfileProperty("textures", value));
-        } else {
-            b.name(s); // the server resolves the username
-        }
-        return b.build();
-    }
 
     private Component previewText(Card c) {
         var b = Component.text();

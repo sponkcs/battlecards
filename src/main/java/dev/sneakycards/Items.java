@@ -1,5 +1,8 @@
 package dev.sneakycards;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -9,18 +12,41 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.UUID;
 import java.util.List;
 
 /** Builds every custom item. Models come from the resource pack (namespace "sneakycards"). */
 public final class Items {
     final NamespacedKey cardKey, packKey, binderKey, matKey;
 
+    private final SneakyCardsPlugin plugin;
+
     Items(SneakyCardsPlugin plugin) {
+        this.plugin = plugin;
         cardKey = new NamespacedKey(plugin, "card");
         packKey = new NamespacedKey(plugin, "pack");
         binderKey = new NamespacedKey(plugin, "binder");
         matKey = new NamespacedKey(plugin, "mat");
+    }
+
+    /** The card's skin as a profile: used by the mannequin and by the head drawn on the card item. */
+    public ResolvableProfile profile(Card c) {
+        var b = ResolvableProfile.resolvableProfile();
+        String s = c.skin();
+        if (s.equalsIgnoreCase("placeholder")) s = plugin.getConfig().getString("placeholder-skin", "Steve");
+        if (s.startsWith("http")) {
+            String meta = c.slim() ? ",\"metadata\":{\"model\":\"slim\"}" : "";
+            String json = "{\"textures\":{\"SKIN\":{\"url\":\"" + s + "\"" + meta + "}}}";
+            String value = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+            b.uuid(UUID.nameUUIDFromBytes((s + c.slim()).getBytes(StandardCharsets.UTF_8)));
+            b.addProperty(new ProfileProperty("textures", value));
+        } else {
+            b.name(s); // the server resolves the username
+        }
+        return b.build();
     }
 
     static Component t(String s, TextColor c) { return Component.text(s, c).decoration(TextDecoration.ITALIC, false); }
@@ -53,6 +79,8 @@ public final class Items {
         m.lore(lore);
         m.getPersistentDataContainer().set(cardKey, PersistentDataType.STRING, c.id());
         it.setItemMeta(m);
+        // the resource pack draws this profile's head in the card's picture window
+        it.setData(DataComponentTypes.PROFILE, profile(c));
         return it;
     }
 
