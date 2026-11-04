@@ -31,7 +31,7 @@ public final class DisplayManager {
         ItemDisplay face; Interaction hit; Mannequin man; TextDisplay preview, hpText;
         Anim anim = Anim.NONE; int animTick = 0; long age = 0;
         // battle state
-        int hp, maxHp; boolean ko = false; boolean acted = false;   // acted: already used its action this round
+        int hp, maxHp; boolean ko = false; boolean acted = false; boolean faceDown = false;   // acted: already used its action this round
         Mat mat; int side = -1, col = -1;
         // attack animation state
         Vector dir; double reach = 1.0; Placed target; Runnable onImpact, onDone;
@@ -56,7 +56,10 @@ public final class DisplayManager {
 
     // ---- placing and removing ----
 
-    public Placed place(Player owner, Card card, Location top, float yaw) {
+    public Placed place(Player owner, Card card, Location top, float yaw) { return place(owner, card, top, yaw, false); }
+
+    /** faceDown: shows the card back and no mannequin until {@link #reveal} is called (used on game mats). */
+    public Placed place(Player owner, Card card, Location top, float yaw, boolean faceDown) {
         int max = plugin.getConfig().getInt("max-cards-per-player", 3);
         long mine = placed.stream().filter(p -> p.owner.equals(owner.getUniqueId())).count();
         if (mine >= max) {
@@ -67,7 +70,8 @@ public final class DisplayManager {
         Placed p = new Placed(owner.getUniqueId(), card, top.clone(), yaw);
         p.maxHp = card.stat(Stat.HEALTH);
         p.hp = p.maxHp;
-        ItemStack item = plugin.items().card(card);
+        p.faceDown = faceDown;
+        ItemStack item = faceDown ? plugin.items().cardBack() : plugin.items().card(card);
         double hover = hover(), scale = scale(), headTop = hover + 1.85 * scale;
 
         // the mat surface is about 0.063 above the block top, so the card sits just above it
@@ -76,8 +80,7 @@ public final class DisplayManager {
             d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
             d.setRotation(yaw, 0);
             // Lays the card flat. Tune angle/scale on your server if it looks mirrored.
-            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f((float) Math.toRadians(-90), 1, 0, 0),
-                    new Vector3f(1.08f, 1.08f, 1.08f), new AxisAngle4f()));
+            d.setTransformation(flat(0f, 1f));
             d.setPersistent(false);
         });
         p.hit = w.spawn(top.clone(), Interaction.class, i -> {
@@ -86,21 +89,7 @@ public final class DisplayManager {
             i.setResponsive(true);
             i.setPersistent(false);
         });
-        ResolvableProfile profile = plugin.items().profile(card);
-        Location manLoc = top.clone().add(0, hover, 0);
-        manLoc.setYaw(yaw);
-        p.man = w.spawn(manLoc, Mannequin.class, m -> {
-            m.setProfile(profile);
-            m.setImmovable(true);
-            m.setGravity(false);
-            m.setInvulnerable(true);
-            m.setSilent(true);
-            m.setPersistent(false);
-            m.setDescription(null);
-            m.setCustomNameVisible(false);
-            AttributeInstance sc = m.getAttribute(Attribute.SCALE);
-            if (sc != null) sc.setBaseValue(scale);
-        });
+        if (!faceDown) spawnMannequin(p);
         p.hpText = w.spawn(top.clone().add(0, headTop + 0.18, 0), TextDisplay.class, t -> {
             t.text(hpLine(p));
             t.setBillboard(Display.Billboard.CENTER);
@@ -119,8 +108,114 @@ public final class DisplayManager {
         });
         placed.add(p);
         byEntity.put(p.hit.getUniqueId(), p);
-        byEntity.put(p.man.getUniqueId(), p);
         return p;
+    }
+
+    /** The card lying flat on the mat. lift raises it (blocks); width 1 = normal, near 0 = edge-on (mid-flip). */
+    private static Transformation flat(float lift, float width) {
+        return new Transformation(new Vector3f(0, lift, 0), new AxisAngle4f((float) Math.toRadians(-90), 1, 0, 0),
+                new Vector3f(1.08f * width, 1.08f, 1.08f), new AxisAngle4f());
+    }
+
+    private void spawnMannequin(Placed p) {
+        World w = p.base.getWorld();
+        ResolvableProfile profile = plugin.items().profile(p.card);
+        double scale = scale();
+        Location manLoc = p.base.clone().add(0, hover(), 0);
+        manLoc.setYaw(p.yaw);
+        p.man = w.spawn(manLoc, Mannequin.class, m -> {
+            m.setProfile(profile);
+            m.setImmovable(true);
+            m.setGravity(false);
+            m.setInvulnerable(true);
+            m.setSilent(true);
+            m.setPersistent(false);
+            m.setDescription(null);
+            m.setCustomNameVisible(false);
+            AttributeInstance sc = m.getAttribute(Attribute.SCALE);
+            if (sc != null) sc.setBaseValue(scale);
+        });
+        byEntity.put(p.man.getUniqueId(), p);
+    }
+
+    /**
+     * Flips a face-down card: it lifts and turns edge-on, swaps to the real card, settles back down, then the
+     * mannequin appears. Epic and higher get a rarity flair.
+     */
+    public void reveal(Placed p) {
+        if (!p.faceDown || p.face == null || !p.face.isValid()) return;
+        p.faceDown = false;
+        World w = p.base.getWorld();
+        p.face.setInterpolationDelay(0);
+        p.face.setInterpolationDuration(4);
+        p.face.setTransformation(flat(0.25f, 0.02f));
+        w.playSound(p.base, Sound.ITEM_BOOK_PAGE_TURN, 1f, 0.8f);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (p.face == null || !p.face.isValid()) return;
+            p.face.setItemStack(plugin.items().card(p.card));
+            p.face.setInterpolationDelay(0);
+            p.face.setInterpolationDuration(5);
+            p.face.setTransformation(flat(0f, 1f));
+            refreshHp(p);
+        }, 4L);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!placed.contains(p) || p.ko) return;
+            spawnMannequin(p);
+            w.spawnParticle(Particle.POOF, p.base.clone().add(0, hover() + 0.3, 0), 8, 0.1, 0.15, 0.1, 0.02);
+            flair(p);
+        }, 9L);
+    }
+
+    /** Particle flair for Epic (purple swirl), Legendary (golden column) and Mythic (pink helix and burst). */
+    private void flair(Placed p) {
+        Rarity r = p.card.rarity();
+        if (r.ordinal() < Rarity.EPIC.ordinal()) return;
+        World w = p.base.getWorld();
+        Location c = p.base.clone().add(0, 0.1, 0);
+        int rgb = r.color.value();
+        Particle.DustOptions dust = new Particle.DustOptions(Color.fromRGB(rgb), r == Rarity.MYTHIC ? 1.1f : 0.8f);
+        switch (r) {
+            case EPIC -> w.playSound(c, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1f, 1.2f);
+            case LEGENDARY -> { w.playSound(c, Sound.BLOCK_BELL_USE, 0.8f, 1.4f); w.playSound(c, Sound.ENTITY_PLAYER_LEVELUP, 0.6f, 1.6f); }
+            default -> { w.playSound(c, Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 1.6f); w.playSound(c, Sound.ENTITY_FIREWORK_ROCKET_TWINKLE, 1f, 1.2f); }
+        }
+        final int len = r == Rarity.EPIC ? 20 : r == Rarity.LEGENDARY ? 26 : 34;
+        new BukkitRunnable() {
+            int t = 0;
+            @Override public void run() {
+                if (t++ >= len || !placed.contains(p)) { cancel(); return; }
+                double f = t / (double) len;
+                switch (r) {
+                    case EPIC -> {                                   // a purple ring that spirals up around the card
+                        for (int i = 0; i < 2; i++) {
+                            double a = t * 0.6 + i * Math.PI;
+                            w.spawnParticle(Particle.DUST, c.clone().add(Math.cos(a) * 0.35, f * 0.9, Math.sin(a) * 0.35), 1, 0, 0, 0, 0, dust);
+                        }
+                        if (t % 4 == 0) w.spawnParticle(Particle.WITCH, c.clone().add(0, f * 0.9, 0), 2, 0.15, 0.1, 0.15, 0);
+                    }
+                    case LEGENDARY -> {                              // a golden column with falling sparks
+                        for (int i = 0; i < 3; i++) {
+                            double a = t * 0.5 + i * (Math.PI * 2 / 3);
+                            w.spawnParticle(Particle.DUST, c.clone().add(Math.cos(a) * 0.25, f * 1.2, Math.sin(a) * 0.25), 1, 0, 0, 0, 0, dust);
+                        }
+                        if (t % 3 == 0) w.spawnParticle(Particle.WAX_ON, c.clone().add(0, 1.0, 0), 3, 0.25, 0.1, 0.25, 0);
+                        if (t == len - 1) w.spawnParticle(Particle.FIREWORK, c.clone().add(0, 1.1, 0), 18, 0.1, 0.1, 0.1, 0.08);
+                    }
+                    default -> {                                     // Mythic: double pink helix, end-rod sparkles, then a burst
+                        for (int i = 0; i < 2; i++) {
+                            double a = t * 0.45 + i * Math.PI, rad = 0.45 - f * 0.2;
+                            w.spawnParticle(Particle.DUST, c.clone().add(Math.cos(a) * rad, f * 1.4, Math.sin(a) * rad), 2, 0.01, 0.01, 0.01, 0, dust);
+                        }
+                        if (t % 2 == 0) w.spawnParticle(Particle.END_ROD, c.clone().add(0, f * 1.4, 0), 1, 0.2, 0.05, 0.2, 0.01);
+                        if (t == len - 1) {
+                            w.spawnParticle(Particle.FIREWORK, c.clone().add(0, 1.3, 0), 30, 0.1, 0.1, 0.1, 0.12);
+                            w.spawnParticle(Particle.TOTEM_OF_UNDYING, c.clone().add(0, 1.0, 0), 25, 0.2, 0.3, 0.2, 0.25);
+                            w.playSound(c, Sound.ENTITY_FIREWORK_ROCKET_BLAST, 0.8f, 1.3f);
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private double hover() { return plugin.getConfig().getDouble("mannequin-hover", 0.3); }
@@ -141,6 +236,7 @@ public final class DisplayManager {
     }
 
     private Component hpLine(Placed p) {
+        if (p.faceDown) return Component.text("Face-down card", NamedTextColor.GRAY);
         Component name = Component.text(p.card.name(), p.card.rarity().color());
         if (p.ko) return name.appendNewline().append(Component.text("Knocked out", NamedTextColor.RED));
         double r = p.hp / (double) Math.max(1, p.maxHp);
@@ -391,6 +487,7 @@ public final class DisplayManager {
         for (Player pl : Bukkit.getOnlinePlayers()) {
             Entity e = pl.getTargetEntity(6);
             Placed want = e == null ? null : byEntity.get(e.getUniqueId());
+            if (want != null && want.faceDown && !want.owner.equals(pl.getUniqueId())) want = null;   // only the owner may peek
             Placed cur = viewing.get(pl.getUniqueId());
             if (cur == want) continue;
             if (cur != null && cur.preview != null) pl.hideEntity(plugin, cur.preview);

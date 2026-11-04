@@ -33,7 +33,7 @@ Mats are not saved: they disappear on restart or when the chunk unloads, and car
 
 ## How a battle works
 1. Each side plays 3 **different** cards. Team cost is capped at 10: Common 1, Uncommon 2, Rare 3, Epic 4, Legendary 5, Mythic 6.
-2. The battle starts when both sides are full. Higher total Dexterity goes first (tie: coin flip); the other side starts with +1 energy.
+2. Cards are played face down. When both sides are full they flip over one by one (Epic and higher with a rarity flair) and the battle starts. Higher total Dexterity goes first (tie: coin flip); the other side starts with +1 energy.
 3. At the start of your turn you gain 2 energy (max 6). Moves cost energy by power: 1 (up to 12), 2 (up to 24), 3 (above). Luck moves refund 1. Rest skips the turn for +1 extra energy.
 4. Each card acts once per round: all your living cards must act before any can act again.
 5. Types: a card's type is its highest of Strength / Dexterity / Magicing. Strength beats Magicing, Magicing beats Dexterity, Dexterity beats Strength (x1.5 / x0.75).

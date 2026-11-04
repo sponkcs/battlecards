@@ -85,6 +85,16 @@ public final class Items {
         return it;
     }
 
+    /** Shown on the mat before a battle starts, so opponents can't see the card. */
+    public ItemStack cardBack() {
+        ItemStack it = new ItemStack(Material.PAPER);
+        ItemMeta m = it.getItemMeta();
+        model(m, "card_facedown");
+        m.displayName(t("Face-down card", NamedTextColor.GRAY));
+        it.setItemMeta(m);
+        return it;
+    }
+
     public ItemStack pack(int amount) {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta m = it.getItemMeta();

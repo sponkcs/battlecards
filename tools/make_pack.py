@@ -176,6 +176,10 @@ wjson(path("assets", NS, "models", "item", "card_base.json"), {
         "gui": {"rotation": [0,0,0], "scale": [1.1,1.1,1.1]},
         **{ctx: {"rotation": rot, "translation": tr, "scale": [c, c, c]} for ctx, (rot, tr, c) in CARD_DISPLAY.items() if ctx != "gui"}},
     "gui_light": "front"})
+# face-down card shown on the mat until the battle starts (card back on both sides, no head layer)
+wjson(path("assets", NS, "models", "item", "card_facedown.json"),
+      {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/card_back", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/card_back"}})
+wjson(path("assets", NS, "items", "card_facedown.json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/card_facedown"}})
 for bk in BACKGROUNDS:
     for k in RARITIES:
         n = f"card_{bk}_{k}"

@@ -168,7 +168,7 @@ public final class BattleManager {
         }
 
         boolean claimed = m.players[side] == null;
-        DisplayManager.Placed pl = displays().place(p, card, m.slotTop(side, col), m.sideYaw(side));
+        DisplayManager.Placed pl = displays().place(p, card, m.slotTop(side, col), m.sideYaw(side), true);
         if (pl == null) return;
         if (claimed) { m.players[side] = me; byPlayer.put(me, m); }
         pl.mat = m; pl.side = side; pl.col = col;
@@ -265,9 +265,18 @@ public final class BattleManager {
         Title t = Title.title(Component.text("Battle!", NamedTextColor.RED).decorate(TextDecoration.BOLD), Component.text(who + " goes first", NamedTextColor.GOLD),
                 Title.Times.times(Duration.ofMillis(300), Duration.ofSeconds(2), Duration.ofMillis(400)));
         for (UUID id : m.players) { Player p = id == null ? null : Bukkit.getPlayer(id); if (p != null) p.showTitle(t); }
-        for (int s = 0; s < 2; s++) for (var c : m.cards[s]) if (c != null) m.center.getWorld().spawnParticle(Particle.CRIT, c.base.clone().add(0, 0.5, 0), 10, 0.2, 0.2, 0.2, 0.1);
+        // flip the cards one at a time, alternating sides, then the first turn begins
         m.busy = true;
-        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (m.state == Mat.State.FIGHTING && mats.contains(m)) beginTurn(m); }, 50L);
+        long delay = 25L, extra = 0;
+        for (int col = 0; col < 3; col++) for (int s = 0; s < 2; s++) {
+            var c = m.cards[s][col];
+            if (c == null) continue;
+            final var card = c;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> { if (m.state == Mat.State.FIGHTING && mats.contains(m)) displays().reveal(card); }, delay);
+            if (c.card.rarity().ordinal() >= Rarity.EPIC.ordinal()) extra = Math.max(extra, 30L);
+            delay += 10L;
+        }
+        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (m.state == Mat.State.FIGHTING && mats.contains(m)) beginTurn(m); }, delay + 20L + extra);
     }
 
     private void beginTurn(Mat m) {
