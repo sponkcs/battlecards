@@ -10,6 +10,10 @@ public final class CardRegistry {
     private final SneakyCardsPlugin plugin;
     private final File file;
     private final Map<String, Card> cards = new LinkedHashMap<>();
+    private Map<Rarity, List<Card>> pool = null;   // rebuilt only when cards change
+    private double poolWeight = 0;
+
+    private void dirty() { pool = null; }
 
     CardRegistry(SneakyCardsPlugin plugin) {
         this.plugin = plugin;
@@ -18,6 +22,7 @@ public final class CardRegistry {
 
     void load() {
         cards.clear();
+        dirty();
         if (!file.exists()) { seedDemo(); save(); return; }
         ConfigurationSection sec = YamlConfiguration.loadConfiguration(file).getConfigurationSection("cards");
         if (sec == null) return;
@@ -46,6 +51,7 @@ public final class CardRegistry {
     public boolean add(Card c) {
         if (cards.containsKey(c.id())) return false;
         cards.put(c.id(), c);
+        dirty();
         save();
         return true;
     }
@@ -54,25 +60,36 @@ public final class CardRegistry {
     public boolean update(Card c) {
         if (!cards.containsKey(c.id())) return false;
         cards.put(c.id(), c);
+        dirty();
         save();
         return true;
     }
 
     public Card remove(String id) {
         Card c = cards.remove(id);
-        if (c != null) save();
+        if (c != null) { dirty(); save(); }
         return c;
     }
 
     public Card get(String id) { return cards.get(id); }
     public Collection<Card> all() { return cards.values(); }
 
+    private Map<Rarity, List<Card>> pool() {
+        if (pool == null) {
+            Map<Rarity, List<Card>> by = new EnumMap<>(Rarity.class);
+            for (Card c : cards.values()) if (c.inPacks()) by.computeIfAbsent(c.rarity(), k -> new ArrayList<>()).add(c);
+            pool = by;
+            poolWeight = by.keySet().stream().mapToDouble(x -> x.weight).sum();
+        }
+        return pool;
+    }
+
+    public boolean hasPool() { return !pool().isEmpty(); }
+
     public Card draw(Random r) {
-        Map<Rarity, List<Card>> by = new EnumMap<>(Rarity.class);
-        for (Card c : cards.values()) if (c.inPacks()) by.computeIfAbsent(c.rarity(), k -> new ArrayList<>()).add(c);
+        Map<Rarity, List<Card>> by = pool();
         if (by.isEmpty()) return null;
-        double total = by.keySet().stream().mapToDouble(x -> x.weight).sum();
-        double roll = r.nextDouble() * total;
+        double roll = r.nextDouble() * poolWeight;
         Rarity pick = null;
         for (Rarity x : by.keySet()) { pick = x; roll -= x.weight; if (roll < 0) break; }
         List<Card> list = by.get(pick);

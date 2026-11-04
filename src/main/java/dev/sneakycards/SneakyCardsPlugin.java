@@ -28,6 +28,7 @@ public final class SneakyCardsPlugin extends JavaPlugin {
         registry.load();
         binders = new BinderStore(this);
         binders.load();
+        binders.startAutosave();
         prompts = new PromptManager();
         displays = new DisplayManager(this);
         battles = new BattleManager(this);

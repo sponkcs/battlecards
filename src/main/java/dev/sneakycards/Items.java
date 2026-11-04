@@ -27,7 +27,15 @@ public final class Items {
 
     private static void model(ItemMeta m, String path) { m.setItemModel(NamespacedKey.fromString("sneakycards:" + path)); }
 
+    private final java.util.Map<Card, ItemStack> cardCache = new java.util.HashMap<>();
+
+    /** Card items are cached per card (the Card record changes when edited, so edits get a fresh item). */
     public ItemStack card(Card c) {
+        if (cardCache.size() > 512) cardCache.clear();
+        return cardCache.computeIfAbsent(c, this::buildCard).clone();
+    }
+
+    private ItemStack buildCard(Card c) {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta m = it.getItemMeta();
         model(m, "card_" + c.background().key() + "_" + c.rarity().key());

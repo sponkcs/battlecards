@@ -1,4 +1,5 @@
 cards-per-pack: 3
+pack-cooldown-ms: 400        # minimum time between pack openings per player
 max-cards-per-player: 3     # cards a player can have on the mat at once
 mannequin-hover: 0.3        # how far the mannequin floats above its card (blocks)
 mannequin-size: 0.28        # mannequin scale; 1.0 = player size

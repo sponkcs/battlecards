@@ -5,6 +5,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -144,23 +147,43 @@ public final class Listeners implements Listener {
         }
     }
 
+    private final Map<UUID, Long> lastPack = new HashMap<>();
+
+    /** Opens one pack. Rate-limited per player, refuses when the inventory can't hold the cards (no ground drops). */
     private void openPack(Player p, ItemStack pack) {
-        if (plugin.registry().draw(rng) == null) {
+        long now = System.currentTimeMillis();
+        long cooldown = plugin.getConfig().getLong("pack-cooldown-ms", 400);
+        Long last = lastPack.get(p.getUniqueId());
+        if (last != null && now - last < cooldown) return;               // ignore spam clicks quietly
+        lastPack.put(p.getUniqueId(), now);
+
+        int n = plugin.getConfig().getInt("cards-per-pack", 3);
+        if (!plugin.registry().hasPool()) {
             p.sendMessage(Component.text("There are no cards in the pack pool yet.", NamedTextColor.RED));
             return;
         }
+        if (freeSlots(p) < n) {
+            p.sendActionBar(Component.text("Make room in your inventory first (" + n + " free slots).", NamedTextColor.RED));
+            return;
+        }
         pack.setAmount(pack.getAmount() - 1);
-        int n = plugin.getConfig().getInt("cards-per-pack", 3);
-        p.sendMessage(Component.text("Pack opened! You got:", NamedTextColor.GOLD));
+        var line = Component.text().append(Component.text("Pack: ", NamedTextColor.GOLD));
         for (int i = 0; i < n; i++) {
             Card c = plugin.registry().draw(rng);
-            var left = p.getInventory().addItem(plugin.items().card(c));
-            left.values().forEach(x -> p.getWorld().dropItemNaturally(p.getLocation(), x));
-            p.sendMessage(Component.text(" • ", NamedTextColor.DARK_GRAY)
-                    .append(Items.t(c.name(), c.rarity().color()))
-                    .append(Component.text("  " + c.rarity().label, NamedTextColor.GRAY)));
+            p.getInventory().addItem(plugin.items().card(c));
+            if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
+            line.append(Items.t(c.name(), c.rarity().color()));
         }
-        p.sendMessage(Component.text("The cards are in your inventory. Open your binder and click a card to store it.", NamedTextColor.GRAY));
-        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.7f, 1.4f);
+        p.sendMessage(line.build());
+        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.4f);
     }
+
+    private static int freeSlots(Player p) {
+        int free = 0;
+        for (ItemStack s : p.getInventory().getStorageContents()) if (s == null || s.getType().isAir()) free++;
+        return free;
+    }
+
+    @EventHandler
+    public void onQuitClearCooldown(org.bukkit.event.player.PlayerQuitEvent e) { lastPack.remove(e.getPlayer().getUniqueId()); }
 }

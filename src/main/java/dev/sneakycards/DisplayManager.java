@@ -403,6 +403,7 @@ public final class DisplayManager {
     // ---- look-at preview ----
 
     private void updatePreviews() {
+        if (placed.isEmpty() && viewing.isEmpty()) return;               // nothing to look at: skip the ray casts
         for (Player pl : Bukkit.getOnlinePlayers()) {
             Entity e = pl.getTargetEntity(6);
             Placed want = e == null ? null : byEntity.get(e.getUniqueId());
