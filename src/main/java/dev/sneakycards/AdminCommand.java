@@ -38,6 +38,24 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 plugin.registry().all().forEach(card -> s.sendMessage(Component.text(" • " + card.id() + " (" + card.rarity().label + ", " + card.collection() + ")", NamedTextColor.GRAY)));
             }
             case "mat" -> mat(s, a);
+            case "cards" -> { if (s instanceof Player p) new CardListMenu(plugin, p).open(); else say(s, "Players only."); }
+            case "edit" -> {
+                if (!(s instanceof Player p)) { say(s, "Players only."); return true; }
+                Card card = a.length > 1 ? plugin.registry().get(a[1]) : null;
+                if (card == null) { say(s, "Usage: /cardadmin edit <cardId>  (see /cardadmin list or /cardadmin cards)"); return true; }
+                plugin.draft(p).load(card);
+                new AdminMenu(plugin, p).open();
+            }
+            case "delete" -> {
+                if (a.length < 2) { say(s, "Usage: /cardadmin delete <cardId> confirm"); return true; }
+                Card card = plugin.registry().get(a[1]);
+                if (card == null) { say(s, "No card with id " + a[1] + "."); return true; }
+                if (a.length < 3 || !a[2].equalsIgnoreCase("confirm")) {
+                    say(s, "This deletes " + card.name() + " for everyone. Type /cardadmin delete " + card.id() + " confirm");
+                    return true;
+                }
+                CardAdmin.delete(plugin, s, card.id());
+            }
             case "reload" -> { plugin.reloadConfig(); plugin.registry().load(); plugin.binders().load(); say(s, "Reloaded."); }
             case "pack" -> { if (s instanceof Player p) plugin.sendPack(p); }
             case "place", "move", "hurt" -> { if (s instanceof Player p) playerTools(p, a); else say(s, "Players only."); }
@@ -108,11 +126,12 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
-        if (a.length == 1) return List.of("give", "binder", "mat", "place", "move", "hurt", "clear", "list", "pack", "reload");
-        if (a.length == 2 && a[0].equalsIgnoreCase("place")) return plugin.registry().all().stream().map(Card::id).toList();
+        if (a.length == 1) return List.of("give", "binder", "mat", "cards", "edit", "delete", "place", "move", "hurt", "clear", "list", "pack", "reload");
+        if (a.length == 2 && (a[0].equalsIgnoreCase("place") || a[0].equalsIgnoreCase("edit") || a[0].equalsIgnoreCase("delete"))) return plugin.registry().all().stream().map(Card::id).toList();
         if (a.length == 2 && a[0].equalsIgnoreCase("mat")) return List.of("classic", "purple", "neon", "remove");
         if (a.length == 2 && a[0].equalsIgnoreCase("move")) return List.of("1", "2");
         if (a.length == 3 && a[0].equalsIgnoreCase("give")) return List.of("pack", "card");
+        if (a.length == 3 && a[0].equalsIgnoreCase("delete")) return List.of("confirm");
         if (a.length == 4 && a[0].equalsIgnoreCase("give") && a[2].equalsIgnoreCase("card")) return plugin.registry().all().stream().map(Card::id).toList();
         return List.of();
     }

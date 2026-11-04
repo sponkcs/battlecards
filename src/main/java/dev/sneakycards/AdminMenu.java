@@ -34,7 +34,7 @@ public final class AdminMenu implements InventoryHolder {
         this.plugin = plugin;
         this.player = player;
         this.d = plugin.draft(player);
-        this.inv = Bukkit.createInventory(this, 54, Component.text("Card Creator"));
+        this.inv = Bukkit.createInventory(this, 54, Component.text(d.editing == null ? "Card Creator" : "Editing: " + d.name));
         render();
     }
 
@@ -91,11 +91,26 @@ public final class AdminMenu implements InventoryHolder {
                 d.stats.put(s, Math.min(99, s == Stat.HEALTH ? v + 15 : v));
             }
         });
-        set(5, it.menu("reset", "Reset", NamedTextColor.GRAY, 1, "Clears the form"), t -> d.reset());
+        set(5, it.menu("reset", d.editing == null ? "Reset" : "Stop editing", NamedTextColor.GRAY, 1,
+                d.editing == null ? "Clears the form" : "Clears the form and goes back to making a new card"), t -> d.reset());
         set(6, it.menu("gift", "Give test pack", NamedTextColor.LIGHT_PURPLE, 1, "Gives you one pack"),
                 t -> player.getInventory().addItem(plugin.items().pack(1)));
         set(7, it.menu("close", "Close menu", NamedTextColor.RED, 1), t -> Bukkit.getScheduler().runTask(plugin, () -> player.closeInventory()));
-        set(8, it.menu("create", "Create card", NamedTextColor.GREEN, 1, "Saves the card", "Adds it to packs if ON"), t -> create());
+        if (d.editing == null)
+            set(8, it.menu("create", "Create card", NamedTextColor.GREEN, 1, "Saves the card", "Adds it to packs if ON"), t -> create());
+        else {
+            set(8, it.menu("create", "Save changes", NamedTextColor.GREEN, 1, "Updates " + d.editing, "Cards players already own update too"), t -> create());
+            boolean armed = System.currentTimeMillis() - d.deleteArmedAt < 5000;
+            set(53, it.menu("close", armed ? "Click again to DELETE" : "Delete card", NamedTextColor.RED, 1,
+                    armed ? "This cannot be undone" : "Removes it from packs and binders", "Click twice to confirm"), t -> {
+                if (System.currentTimeMillis() - d.deleteArmedAt < 5000) {
+                    CardAdmin.delete(plugin, player, d.editing);
+                    d.reset();
+                } else d.deleteArmedAt = System.currentTimeMillis();
+            });
+            set(44, it.menu("info", "Back to card list", NamedTextColor.AQUA, 1, "Open /cardadmin cards"),
+                    t -> Bukkit.getScheduler().runTask(plugin, () -> new CardListMenu(plugin, player).open()));
+        }
 
         int[] deltas = {-5, -1, 1, 5};
         String[] icons = {"minus_big", "minus", "plus", "plus_big"};
@@ -145,6 +160,16 @@ public final class AdminMenu implements InventoryHolder {
         if (!Card.validSkin(d.skin)) { err("Set a skin: a textures.minecraft.net link or a username."); return; }
         if (d.collection.isBlank()) { err("Set a collection, for example off-duty."); return; }
         if (d.moveNames[0].isBlank() || d.moveNames[1].isBlank()) { err("Each card needs 2 moves. Name both."); return; }
+        if (d.editing != null) {
+            Card old = plugin.registry().get(d.editing);
+            if (old == null) { err("That card was deleted. Reset the form to make a new one."); return; }
+            Card c = new Card(old.id(), d.name, d.skin, d.collection, d.rarity, d.background, new EnumMap<>(d.stats),
+                    List.of(new Move(d.moveNames[0], d.moveStats[0]), new Move(d.moveNames[1], d.moveStats[1])), d.inPacks, d.slim);
+            plugin.registry().update(c);
+            player.sendMessage(Component.text("Saved changes to ", NamedTextColor.GREEN).append(Items.t(c.name(), c.rarity().color()))
+                    .append(Component.text(c.inPacks() ? " (in the pack pool)." : " (not in packs).", NamedTextColor.GREEN)));
+            return;
+        }
         String id = Card.slug(d.name);
         if (id.isEmpty() || plugin.registry().get(id) != null) { err("A card with that name already exists."); return; }
         Card c = new Card(id, d.name, d.skin, d.collection, d.rarity, d.background, new EnumMap<>(d.stats),

@@ -50,6 +50,20 @@ public final class CardRegistry {
         return true;
     }
 
+    /** Replaces an existing card (same id) with edited values. */
+    public boolean update(Card c) {
+        if (!cards.containsKey(c.id())) return false;
+        cards.put(c.id(), c);
+        save();
+        return true;
+    }
+
+    public Card remove(String id) {
+        Card c = cards.remove(id);
+        if (c != null) save();
+        return c;
+    }
+
     public Card get(String id) { return cards.get(id); }
     public Collection<Card> all() { return cards.values(); }
 

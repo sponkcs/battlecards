@@ -6,7 +6,7 @@ description: "SneakyCards: collectible mannequin cards, binder, packs and a game
 commands:
   cardadmin:
     description: Card admin menu and tools
-    usage: /cardadmin [give|binder|mat|place|move|hurt|clear|list|pack|reload]
+    usage: /cardadmin [give|binder|mat|cards|edit|delete|place|move|hurt|clear|list|pack|reload]
     permission: sneakycards.admin
     aliases: [ca]
   sneakycards:

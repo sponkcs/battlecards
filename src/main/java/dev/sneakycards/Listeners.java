@@ -59,6 +59,9 @@ public final class Listeners implements Listener {
         if (h instanceof AdminMenu m) {
             e.setCancelled(true);
             if (e.getClickedInventory() == top) m.click(e.getRawSlot(), e.getClick());
+        } else if (h instanceof CardListMenu m) {
+            e.setCancelled(true);
+            if (e.getClickedInventory() == top) m.click(e.getRawSlot(), e.getClick());
         } else if (h instanceof BackgroundMenu m) {
             e.setCancelled(true);
             if (e.getClickedInventory() == top) m.click(e.getRawSlot());
@@ -81,7 +84,7 @@ public final class Listeners implements Listener {
     @EventHandler
     public void onDrag(InventoryDragEvent e) {
         InventoryHolder h = e.getView().getTopInventory().getHolder();
-        if (h instanceof AdminMenu || h instanceof BinderMenu || h instanceof BackgroundMenu || h instanceof BattleMenu) e.setCancelled(true);
+        if (h instanceof AdminMenu || h instanceof CardListMenu || h instanceof BinderMenu || h instanceof BackgroundMenu || h instanceof BattleMenu) e.setCancelled(true);
     }
 
     @EventHandler
@@ -148,14 +151,16 @@ public final class Listeners implements Listener {
         }
         pack.setAmount(pack.getAmount() - 1);
         int n = plugin.getConfig().getInt("cards-per-pack", 3);
-        p.sendMessage(Component.text("Pack opened! Added to your binder:", NamedTextColor.GOLD));
+        p.sendMessage(Component.text("Pack opened! You got:", NamedTextColor.GOLD));
         for (int i = 0; i < n; i++) {
             Card c = plugin.registry().draw(rng);
-            plugin.binders().add(p.getUniqueId(), c.id(), 1);
+            var left = p.getInventory().addItem(plugin.items().card(c));
+            left.values().forEach(x -> p.getWorld().dropItemNaturally(p.getLocation(), x));
             p.sendMessage(Component.text(" • ", NamedTextColor.DARK_GRAY)
                     .append(Items.t(c.name(), c.rarity().color()))
                     .append(Component.text("  " + c.rarity().label, NamedTextColor.GRAY)));
         }
+        p.sendMessage(Component.text("The cards are in your inventory. Open your binder and click a card to store it.", NamedTextColor.GRAY));
         p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.7f, 1.4f);
     }
 }

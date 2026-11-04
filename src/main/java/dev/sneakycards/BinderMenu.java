@@ -1,7 +1,9 @@
 package dev.sneakycards;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -12,9 +14,26 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-/** Shows every card the player owns; the card model has a rarity-coloured border. */
+/**
+ * Shows every card the player owns, laid out like an open card binder: two pages of 4 x 5 sleeves with the
+ * ring spine down the middle column. The background comes from the resource pack (font sneakycards:gui).
+ */
 public final class BinderMenu implements InventoryHolder {
-    private static final int PER_PAGE = 45;
+    private static final int[] SLOTS = buildSlots();   // container slots that are card sleeves (skips column 4)
+    private static final int PER_PAGE = SLOTS.length;    // 40
+    private static final int PREV = 45, INFO = 49, NEXT = 53;
+
+    private static int[] buildSlots() {
+        int[] out = new int[40]; int n = 0;
+        for (int r = 0; r < 5; r++) for (int c = 0; c < 9; c++) if (c != 4) out[n++] = r * 9 + c;
+        return out;
+    }
+
+    /** Binder background glyph, then the title text in gold on the leather header. */
+    static Component title(String text) {
+        Component bg = Component.text("\uF001\uE000\uF002").font(Key.key("sneakycards", "gui")).color(NamedTextColor.WHITE);
+        return bg.append(Component.text(text, TextColor.color(0xE8C27A)));
+    }
     private final SneakyCardsPlugin plugin;
     private final Player player;
     private final Inventory inv;
@@ -24,7 +43,7 @@ public final class BinderMenu implements InventoryHolder {
     BinderMenu(SneakyCardsPlugin plugin, Player player) {
         this.plugin = plugin;
         this.player = player;
-        this.inv = Bukkit.createInventory(this, 54, Component.text("Card Binder"));
+        this.inv = Bukkit.createInventory(this, 54, title("Card Binder"));
         render();
     }
 
@@ -46,22 +65,22 @@ public final class BinderMenu implements InventoryHolder {
             Card c = list.get(idx);
             ItemStack stack = it.card(c);
             stack.setAmount(Math.min(64, own.get(c.id())));
-            inv.setItem(i, stack);
+            inv.setItem(SLOTS[i], stack);
             shown.add(c);
         }
-        ItemStack blank = it.menu("blank", " ", NamedTextColor.GRAY, 1);
-        for (int i = PER_PAGE; i < 54; i++) inv.setItem(i, blank);
-        if (page > 0) inv.setItem(48, it.menu("prev", "Previous page", NamedTextColor.WHITE, 1));
-        inv.setItem(49, it.menu("info", "Page " + (page + 1) + " of " + pages, NamedTextColor.AQUA, 1,
+        if (page > 0) inv.setItem(PREV, it.menu("prev", "Previous page", NamedTextColor.WHITE, 1));
+        inv.setItem(INFO, it.menu("info", "Page " + (page + 1) + " of " + pages, NamedTextColor.AQUA, 1,
                 list.size() + " different cards", "Click a card to take one", "Click a card in your inventory to store it"));
-        if (page < pages - 1) inv.setItem(50, it.menu("next", "Next page", NamedTextColor.WHITE, 1));
+        if (page < pages - 1) inv.setItem(NEXT, it.menu("next", "Next page", NamedTextColor.WHITE, 1));
     }
 
     public void click(int slot) {
-        if (slot == 48 && page > 0) { page--; render(); return; }
-        if (slot == 50) { page++; render(); return; }
-        if (slot < 0 || slot >= shown.size()) return;
-        Card c = shown.get(slot);
+        if (slot == PREV && page > 0) { page--; render(); return; }
+        if (slot == NEXT) { page++; render(); return; }
+        int idx = -1;
+        for (int i = 0; i < SLOTS.length; i++) if (SLOTS[i] == slot) idx = i;
+        if (idx < 0 || idx >= shown.size()) return;
+        Card c = shown.get(idx);
         if (!plugin.binders().take(player.getUniqueId(), c.id())) return;
         var left = player.getInventory().addItem(plugin.items().card(c));
         left.values().forEach(i -> player.getWorld().dropItemNaturally(player.getLocation(), i));

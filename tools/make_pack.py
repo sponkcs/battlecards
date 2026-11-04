@@ -213,6 +213,15 @@ wjson(path("assets", NS, "models", "item", "binder.json"), {
         "fixed": {"rotation": [0,180,0], "scale": [1,1,1]}}})
 wjson(path("assets", NS, "items", "binder.json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/binder"}})
 
+# ---------- binder menu background, drawn as a font glyph in the menu title ----------
+# \ue000 = the 176 x 222 GUI image; \uf001 moves 8 px left (to the GUI edge), \uf002 moves back 169 px so the
+# title text starts where it normally would. BinderMenu.java builds the title from these characters.
+from gui import binder as binder_gui
+binder_gui().save(path("assets", NS, "textures", "font", "binder_gui.png"))
+wjson(path("assets", NS, "font", "gui.json"), {"providers": [
+    {"type": "bitmap", "file": f"{NS}:font/binder_gui.png", "height": 222, "ascent": 13, "chars": ["\ue000"]},
+    {"type": "space", "advances": {"\uf001": -8, "\uf002": -169}}]})
+
 # pack.mcmeta: resource pack format 88 = Minecraft 26.2
 wjson(path("pack.mcmeta"), {"pack": {"description": "Card game textures and models", "min_format": [88,0], "max_format": [99,0]}})
 

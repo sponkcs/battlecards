@@ -18,6 +18,11 @@ Skyline, Blossom Orchard, Hellfire, Grove Forest, Goo Trees, Brown Slums, Dwarve
 In `/cardadmin` click the Background slot (top row, fourth slot). Art lives in `tools/backgrounds.py`.
 Cards saved with the old names (sakura, arcane) load as Blossom Orchard and Wizard Spire.
 
+## Packs and the binder
+Right-click a pack to open it. The cards go into your inventory (extras drop at your feet).
+Right-click a binder to open it, then click a card in your inventory to store it (shift-click stores the whole stack).
+Click a card in the binder to take one out. The binder background needs the resource pack.
+
 ## Game mats
 Three looks: Classic Felt, Royal Purple, Neon Gradient (cyan to pink). Art lives in `tools/mats.py`.
     /cardadmin mat <classic|purple|neon> [player]    give a mat item
@@ -50,6 +55,9 @@ Edit `skin:` in `cards.yml` for the demo card, then `/cardadmin reload`.
     /cardadmin give <player> pack [n]  |  give <player> card <id> [n]
     /cardadmin binder [player]         give a binder (players also have /binder)
     /cardadmin mat ...                 see above
+    /cardadmin cards                   list every card: click to edit, shift-click twice to delete
+    /cardadmin edit <id>               open a card in the creator; the green button becomes Save changes
+    /cardadmin delete <id> confirm     delete a card (it disappears from packs and binders)
     /cardadmin place <id>              test: show a card without a mat
     /cardadmin move <1|2> | hurt       test the animations on your nearest card
     /cardadmin clear | list | reload | pack
