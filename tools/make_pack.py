@@ -155,18 +155,20 @@ CARD_DISPLAY = {
     "ground": ([0,0,0], [0,0,0], 0.5),
 }
 # Measured in game: the player_head special model draws the head centred on x = z = 0 with y from -8 to 0
-# (model units), facing north. So the head is turned 180 degrees and moved to the picture window
-# centre (8, 8.6) just in front of the card face (z 8.25).
-HEAD_P0, HEAD_S, HEAD_TARGET = (0.0, -4.0, 0.0), (0.625, 0.625, 0.06), (8.0, 8.6, 8.55)
+# (model units), upside down and facing north. Turning it 180 degrees about X fixes both; then it is moved
+# to the picture window centre (8, 8.6) and squashed flat just in front of the card face (z 8.25).
+HEAD_P0, HEAD_S, HEAD_TARGET = (0.0, -4.0, 0.0), (0.625, 0.625, 0.01), (8.0, 8.6, 8.32)
 def rot_y(v, deg):
     r = math.radians(deg); x, y, z = v
     return (x*math.cos(r) + z*math.sin(r), y, -x*math.sin(r) + z*math.cos(r))
-_local = rot_y(tuple(HEAD_S[i] * (HEAD_P0[i] - 8) for i in range(3)), 180)
+def rot_x180(v): return (v[0], -v[1], -v[2])
+_local = rot_x180(tuple(HEAD_S[i] * (HEAD_P0[i] - 8) for i in range(3)))
 HEAD_T = tuple(HEAD_TARGET[i] - 8 - _local[i] for i in range(3))
 head_display = {}
 for ctx, (rot, tr, c) in CARD_DISPLAY.items():
     off = rot_y(HEAD_T, rot[1])
-    head_display[ctx] = {"rotation": [rot[0], rot[1] + 180, rot[2]], "translation": [round(tr[i] + c*off[i], 4) for i in range(3)],
+    # Euler XYZ [180, -y, 0] equals the card's Y turn applied after the 180 degree X flip
+    head_display[ctx] = {"rotation": [180, -rot[1], 0], "translation": [round(tr[i] + c*off[i], 4) for i in range(3)],
                          "scale": [round(c*HEAD_S[i], 4) for i in range(3)]}
 wjson(path("assets", NS, "models", "item", "card_head.json"), {
     "textures": {"particle": f"{NS}:item/card_back"}, "gui_light": "front", "display": head_display})
