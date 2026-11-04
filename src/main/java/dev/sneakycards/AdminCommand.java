@@ -35,7 +35,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             }
             case "list" -> {
                 say(s, plugin.registry().all().size() + " cards:");
-                plugin.registry().all().forEach(card -> s.sendMessage(Component.text(" • " + card.id() + " (" + card.rarity().label + ", " + card.collection() + ")", NamedTextColor.GRAY)));
+                plugin.registry().all().forEach(card -> s.sendMessage(Component.text(" • " + card.id() + " (" + card.rarity().label + ", " + (card.title().isBlank() ? "no title" : card.title()) + ")", NamedTextColor.GRAY)));
             }
             case "mat" -> mat(s, a);
             case "cards" -> { if (s instanceof Player p) new CardListMenu(plugin, p).open(); else say(s, "Players only."); }

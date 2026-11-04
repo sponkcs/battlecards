@@ -5,7 +5,7 @@ import java.util.Map;
 
 /** The card an admin is currently building in the menu. */
 public final class Draft {
-    String name = "", skin = "", collection = "";
+    String name = "", skin = "", title = "";
     Rarity rarity = Rarity.COMMON;
     Background background = Background.SKYLINE;
     boolean inPacks = true;
@@ -22,14 +22,14 @@ public final class Draft {
     void load(Card c) {
         reset();
         editing = c.id();
-        name = c.name(); skin = c.skin(); collection = c.collection();
+        name = c.name(); skin = c.skin(); title = c.title();
         rarity = c.rarity(); background = c.background(); inPacks = c.inPacks(); slim = c.slim();
         for (Stat s : Stat.values()) stats.put(s, c.stat(s));
         for (int i = 0; i < 2 && i < c.moves().size(); i++) { moveNames[i] = c.moves().get(i).name(); moveStats[i] = c.moves().get(i).stat(); }
     }
 
     void reset() {
-        name = ""; skin = ""; collection = ""; rarity = Rarity.COMMON; background = Background.SKYLINE; inPacks = true; slim = false; editing = null; deleteArmedAt = 0;
+        name = ""; skin = ""; title = ""; rarity = Rarity.COMMON; background = Background.SKYLINE; inPacks = true; slim = false; editing = null; deleteArmedAt = 0;
         for (Stat s : Stat.values()) stats.put(s, s.defaultValue());
         moveNames[0] = ""; moveNames[1] = "";
         moveStats[0] = Stat.STRENGTH; moveStats[1] = Stat.LUCK;

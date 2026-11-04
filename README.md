@@ -43,6 +43,9 @@ Upgrading from 0.1.x? Delete the old `hover-height` and `mannequin-scale` lines 
 Players: `/sneakycards turn` reopens the menu (or right-click one of your cards), `/sneakycards forfeit`, `/sneakycards help`.
 Sneak + right-click one of your cards before the battle starts to take it back.
 
+## Titles
+Each card can have an optional title (for example *off-duty*), shown in italics under the name. It is only for looks and has no effect on battles. Older cards saved with a `collection:` keep it as their title.
+
 ## Skins
 Set **Arms** in `/cardadmin` (right-hand column) to Slim for skins with 3-pixel arms, or Classic for 4-pixel arms. It only matters for texture links; username skins already carry their arm type. In `cards.yml` it is `slim-arms: true|false`.
 A card with skin `placeholder` uses `placeholder-skin` from `config.yml`. The placeholder art is `tools/placeholder_skin.png`:

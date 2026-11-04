@@ -4,7 +4,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.util.*;
 import java.util.regex.Pattern;
 
-public record Card(String id, String name, String skin, String collection, Rarity rarity, Background background,
+public record Card(String id, String name, String skin, String title, Rarity rarity, Background background,
                    Map<Stat, Integer> stats, List<Move> moves, boolean inPacks, boolean slim) {
 
     private static final Pattern TEXTURE_URL = Pattern.compile("^https?://textures\\.minecraft\\.net/texture/[0-9a-fA-F]+$");
@@ -33,7 +33,7 @@ public record Card(String id, String name, String skin, String collection, Rarit
     public void save(ConfigurationSection s) {
         s.set("name", name);
         s.set("skin", skin);
-        s.set("collection", collection);
+        s.set("title", title);
         s.set("rarity", rarity.name());
         s.set("background", background.name());
         s.set("in-packs", inPacks);
@@ -61,7 +61,7 @@ public record Card(String id, String name, String skin, String collection, Rarit
         catch (IllegalArgumentException e) { r = Rarity.COMMON; }
         Background bg = Background.parse(s.getString("background", "SKYLINE"));
         return new Card(id, s.getString("name", id), s.getString("skin", "Steve"),
-                s.getString("collection", "none"), r, bg, stats, List.copyOf(moves), s.getBoolean("in-packs", true),
+                s.getString("title", s.getString("collection", "")), r, bg, stats, List.copyOf(moves), s.getBoolean("in-packs", true),
                 s.getBoolean("slim-arms", id.equals("vince_sunseeker"))); // demo skin is slim
     }
 }

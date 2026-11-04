@@ -148,7 +148,7 @@ public final class DisplayManager {
         var b = Component.text();
         b.append(Component.text(c.name(), c.rarity().color()).decorate(TextDecoration.BOLD)).appendNewline();
         b.append(Component.text(c.rarity().label + "  ", c.rarity().color()))
-                .append(Component.text(c.collection(), NamedTextColor.GRAY).decorate(TextDecoration.ITALIC)).appendNewline();
+                .append(Component.text(c.title(), NamedTextColor.GRAY).decorate(TextDecoration.ITALIC)).appendNewline();
         b.append(Component.text(c.background().label, NamedTextColor.DARK_GRAY)).appendNewline();
         for (Stat s : Stat.values()) b.append(Component.text(s.label + " " + c.stat(s), NamedTextColor.WHITE)).appendNewline();
         for (Move m : c.moves())

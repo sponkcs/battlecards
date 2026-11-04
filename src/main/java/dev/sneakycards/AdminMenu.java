@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 /**
  * Chest GUI for creating cards (9 columns x 6 rows):
- *  row 0: name, skin, collection, background (opens a submenu), randomize, reset, test pack, close, create
+ *  row 0: name, skin, title, background (opens a submenu), randomize, reset, test pack, close, create
  *  rows 1-5: one stat per row (label, -5, -1, +1, +5)
  *  columns 6-7: rarity gems, slot 17: add-to-packs toggle, slot 26: slim/classic arms
  *  slots 42-43: move names, 51-52: move stat selectors
@@ -80,8 +80,9 @@ public final class AdminMenu implements InventoryHolder {
                     if (Card.validSkin(c)) { d.skin = c; player.sendMessage(Component.text("Skin set: " + c, NamedTextColor.GREEN)); }
                     else err("That isn't a skin link. Use the http://textures.minecraft.net/texture/... link from mineskin.org, or a username.");
                 }));
-        set(2, it.menu("collection", "Collection", NamedTextColor.WHITE, 1, or(d.collection, "(not set)"), "Click, then type in chat"),
-                t -> ask("Type the collection name.", v -> d.collection = v));
+        set(2, it.menu("collection", "Title", NamedTextColor.WHITE, 1, or(d.title, "(none)"),
+                        "Optional flavour text under the name", "Click, then type in chat ('none' to clear)"),
+                t -> ask("Type the card's title, for example off-duty. Type 'none' to clear it.", v -> d.title = v.equalsIgnoreCase("none") ? "" : v));
         set(3, it.menu("bg_" + d.background.key(), "Background", NamedTextColor.WHITE, 1, d.background.label, "Click to choose"),
                 t -> Bukkit.getScheduler().runTask(plugin, () -> new BackgroundMenu(plugin, player).open()));
         set(4, it.menu("random", "Randomize stats", NamedTextColor.AQUA, 1, "Rolls stats for the chosen rarity"), t -> {
@@ -158,12 +159,11 @@ public final class AdminMenu implements InventoryHolder {
     private void create() {
         if (d.name.isBlank()) { err("Set a card name first."); return; }
         if (!Card.validSkin(d.skin)) { err("Set a skin: a textures.minecraft.net link or a username."); return; }
-        if (d.collection.isBlank()) { err("Set a collection, for example off-duty."); return; }
         if (d.moveNames[0].isBlank() || d.moveNames[1].isBlank()) { err("Each card needs 2 moves. Name both."); return; }
         if (d.editing != null) {
             Card old = plugin.registry().get(d.editing);
             if (old == null) { err("That card was deleted. Reset the form to make a new one."); return; }
-            Card c = new Card(old.id(), d.name, d.skin, d.collection, d.rarity, d.background, new EnumMap<>(d.stats),
+            Card c = new Card(old.id(), d.name, d.skin, d.title, d.rarity, d.background, new EnumMap<>(d.stats),
                     List.of(new Move(d.moveNames[0], d.moveStats[0]), new Move(d.moveNames[1], d.moveStats[1])), d.inPacks, d.slim);
             plugin.registry().update(c);
             player.sendMessage(Component.text("Saved changes to ", NamedTextColor.GREEN).append(Items.t(c.name(), c.rarity().color()))
@@ -172,7 +172,7 @@ public final class AdminMenu implements InventoryHolder {
         }
         String id = Card.slug(d.name);
         if (id.isEmpty() || plugin.registry().get(id) != null) { err("A card with that name already exists."); return; }
-        Card c = new Card(id, d.name, d.skin, d.collection, d.rarity, d.background, new EnumMap<>(d.stats),
+        Card c = new Card(id, d.name, d.skin, d.title, d.rarity, d.background, new EnumMap<>(d.stats),
                 List.of(new Move(d.moveNames[0], d.moveStats[0]), new Move(d.moveNames[1], d.moveStats[1])), d.inPacks, d.slim);
         plugin.registry().add(c);
         player.getInventory().addItem(plugin.items().card(c));

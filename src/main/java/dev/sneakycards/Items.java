@@ -42,7 +42,7 @@ public final class Items {
         m.displayName(t(c.name(), c.rarity().color()).decorate(TextDecoration.BOLD));
         List<Component> lore = new ArrayList<>();
         lore.add(t(c.rarity().label, c.rarity().color()));
-        lore.add(Component.text(c.collection(), NamedTextColor.GRAY).decorate(TextDecoration.ITALIC));
+        if (!c.title().isBlank()) lore.add(Component.text(c.title(), NamedTextColor.GRAY).decorate(TextDecoration.ITALIC));
         lore.add(t(c.background().label, NamedTextColor.DARK_GRAY));
         lore.add(Component.empty());
         for (Stat s : Stat.values()) lore.add(t(s.label + ": " + c.stat(s), NamedTextColor.WHITE));
