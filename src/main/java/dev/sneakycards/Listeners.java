@@ -169,12 +169,25 @@ public final class Listeners implements Listener {
             p.sendMessage(Component.text("There are no cards in the pack pool yet.", NamedTextColor.RED));
             return;
         }
+        // a god pack: every character card is a holographic Rare or better. Summoned with /cardadmin godpack,
+        // or (if god-pack-chance > 0) any normal pack can secretly be one.
+        boolean god = plugin.items().isGodPack(pack) || rng.nextDouble() < plugin.getConfig().getDouble("god-pack-chance", 0.0);
         pack.setAmount(pack.getAmount() - 1);
-        var line = Component.text().append(Component.text("Pack: ", NamedTextColor.GOLD));
+        if (god) {
+            p.showTitle(net.kyori.adventure.title.Title.title(
+                    Component.text("✦ ✦ ✦  GOD PACK  ✦ ✦ ✦", net.kyori.adventure.text.format.TextColor.color(0xFFE38A)).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD),
+                    Component.text("Every card is holographic", net.kyori.adventure.text.format.TextColor.color(0xB8F2FF)),
+                    net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(200), java.time.Duration.ofMillis(1800), java.time.Duration.ofMillis(400))));
+            p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 0.8f);
+            p.playSound(p.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 0.4f, 1.6f);
+            p.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, p.getLocation().add(0, 1.2, 0), 60, 0.4, 0.6, 0.4, 0.4);
+            org.bukkit.Bukkit.broadcast(Component.text("✦ " + p.getName() + " opened a GOD PACK! ✦", net.kyori.adventure.text.format.TextColor.color(0xFFE38A)));
+        }
+        var line = Component.text().append(Component.text(god ? "GOD PACK: " : "Pack: ", god ? net.kyori.adventure.text.format.TextColor.color(0xFFE38A) : NamedTextColor.GOLD));
         boolean dropped = false;
         for (int i = 0; i < n; i++) {
-            Card c = plugin.registry().draw(rng);
-            boolean holo = rng.nextDouble() < plugin.getConfig().getDouble("holo-chance", 0.03);
+            Card c = god ? plugin.registry().draw(rng, Rarity.RARE) : plugin.registry().draw(rng);
+            boolean holo = god || rng.nextDouble() < plugin.getConfig().getDouble("holo-chance", 0.03);
             if (Items.give(p, plugin.items().card(c, holo))) dropped = true;
             if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
             if (holo) {

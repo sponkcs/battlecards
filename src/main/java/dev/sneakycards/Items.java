@@ -20,7 +20,7 @@ import java.util.List;
 
 /** Builds every custom item. Models come from the resource pack (namespace "sneakycards"). */
 public final class Items {
-    final NamespacedKey cardKey, packKey, binderKey, matKey, itemKey, holoKey;
+    final NamespacedKey cardKey, packKey, binderKey, matKey, itemKey, holoKey, godKey;
 
     private final SneakyCardsPlugin plugin;
 
@@ -32,6 +32,7 @@ public final class Items {
         matKey = new NamespacedKey(plugin, "mat");
         itemKey = new NamespacedKey(plugin, "item");
         holoKey = new NamespacedKey(plugin, "holo");
+        godKey = new NamespacedKey(plugin, "godpack");
     }
 
     /** The card's skin as a profile: used by the mannequin and by the head drawn on the card item. */
@@ -134,6 +135,17 @@ public final class Items {
         m.displayName(t("Face-down card", NamedTextColor.GRAY));
         it.setItemMeta(m);
         return it;
+    }
+
+    /** Looks exactly like a normal pack, so the surprise lands when it's opened. */
+    public ItemStack godPack(int amount) {
+        ItemStack it = pack(amount);
+        it.editMeta(m -> m.getPersistentDataContainer().set(godKey, PersistentDataType.BYTE, (byte) 1));
+        return it;
+    }
+
+    public boolean isGodPack(ItemStack it) {
+        return it != null && it.hasItemMeta() && it.getItemMeta().getPersistentDataContainer().has(godKey, PersistentDataType.BYTE);
     }
 
     public ItemStack pack(int amount) {

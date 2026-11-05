@@ -38,6 +38,13 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 plugin.registry().all().forEach(card -> s.sendMessage(Component.text(" • " + card.id() + " (" + card.rarity().label + ", " + (card.title().isBlank() ? "no title" : card.title()) + ")", NamedTextColor.GRAY)));
             }
             case "mat" -> mat(s, a);
+            case "godpack" -> {     // hidden: not listed in tab completion, usage or help
+                Player t = a.length > 1 ? Bukkit.getPlayerExact(a[1]) : (s instanceof Player p ? p : null);
+                if (t == null) { say(s, "Player not found."); return true; }
+                int n = a.length > 2 ? parse(a[2]) : 1;
+                Items.give(t, plugin.items().godPack(n));
+                s.sendMessage(Component.text("Slipped " + n + " god pack(s) to " + t.getName() + ". They look like normal packs.", NamedTextColor.DARK_GRAY));
+            }
             case "seed" -> {
                 int n = plugin.registry().addStarterSet();
                 say(s, n == 0 ? "All 15 starter cards are already there." : "Added " + n + " starter cards (placeholder skin) to the pack pool.");

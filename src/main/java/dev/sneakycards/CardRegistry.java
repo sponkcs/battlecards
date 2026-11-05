@@ -137,6 +137,18 @@ public final class CardRegistry {
 
     public boolean hasPool() { return !pool().isEmpty(); }
 
+    /** A card of at least the given rarity (falls back to any card if none qualify). */
+    public Card draw(Random r, Rarity min) {
+        Map<Rarity, List<Card>> by = new EnumMap<>(Rarity.class);
+        pool().forEach((k, v) -> { if (k.ordinal() >= min.ordinal()) by.put(k, v); });
+        if (by.isEmpty()) return draw(r);
+        double total = by.keySet().stream().mapToDouble(x -> x.weight).sum(), roll = r.nextDouble() * total;
+        Rarity pick = null;
+        for (Rarity x : by.keySet()) { pick = x; roll -= x.weight; if (roll < 0) break; }
+        List<Card> list = by.get(pick);
+        return list.get(r.nextInt(list.size()));
+    }
+
     public Card draw(Random r) {
         Map<Rarity, List<Card>> by = pool();
         if (by.isEmpty()) return null;
