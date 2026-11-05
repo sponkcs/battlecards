@@ -181,7 +181,6 @@ public final class Listeners implements Listener {
             p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 0.8f);
             p.playSound(p.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 0.4f, 1.6f);
             p.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, p.getLocation().add(0, 1.2, 0), 60, 0.4, 0.6, 0.4, 0.4);
-            org.bukkit.Bukkit.broadcast(Component.text("✦ " + p.getName() + " opened a GOD PACK! ✦", net.kyori.adventure.text.format.TextColor.color(0xFFE38A)));
         }
         var line = Component.text().append(Component.text(god ? "GOD PACK: " : "Pack: ", god ? net.kyori.adventure.text.format.TextColor.color(0xFFE38A) : NamedTextColor.GOLD));
         boolean dropped = false;
