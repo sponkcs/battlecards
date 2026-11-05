@@ -21,6 +21,7 @@ Cards saved with the old names (sakura, arcane) load as Blossom Orchard and Wiza
 ## Packs and the binder
 Right-click a pack to open it. The cards go into your inventory (extras drop at your feet).
 Right-click a binder to open it, then click a card in your inventory to store it (shift-click stores the whole stack).
+The binder's Deck builder button builds your battle deck from what's stored there.
 Click a card in the binder to take one out. The binder background needs the resource pack.
 
 ## Game mats
@@ -28,27 +29,35 @@ Three looks: Classic Felt, Royal Purple, Neon Gradient (cyan to pink). Art lives
     /cardadmin mat <classic|purple|neon> [player]    give a mat item
     /cardadmin mat remove                            remove the nearest mat
 Right-click the top of a block with the mat item to place it (it covers 3 x 3 blocks). The player who places it
-stands at the near end. Sneak + right-click the middle of an empty mat to pick it up.
-Mats are not saved: they disappear on restart or when the chunk unloads, and cards on them go back to their owners.
+stands at the near end. Each side has three character slots on the owner's left and a deck slot on their right;
+the middle strip holds each side's discard pile (in front of its deck) and up to two face-down traps.
+Sneak + right-click the middle of an empty mat to pick it up. Mats are not saved across restarts.
+## Decks
+Open your binder and click **Deck builder**. A deck is 15 cards from your binder: at least 6 characters, at most
+2 copies of a card (holo and normal count together), and a deck cost of 35 or less (Common 1 ... Mythic 6).
+Cards stay in your binder; the deck only lists which ones to bring. `/sc deck` opens the builder too.
 
 ## How a battle works
-1. Each side plays 3 **different** cards. Team cost is capped at 10: Common 1, Uncommon 2, Rare 3, Epic 4, Legendary 5, Mythic 6.
-2. Cards are played face down. When both sides are full they flip over one by one (Epic and higher with a rarity flair) and the battle starts. Higher total Dexterity goes first (tie: coin flip); the other side starts with +1 energy.
-3. At the start of your turn you gain 2 energy (max 6). Moves cost energy by power: 1 (up to 12), 2 (up to 24), 3 (above). Luck moves refund 1. Rest skips the turn for +1 extra energy.
-4. Each card acts once per round: all your living cards must act before any can act again.
-5. Types: a card's type is its highest of Strength / Dexterity / Magicing. Strength beats Magicing, Magicing beats Dexterity, Dexterity beats Strength (x1.5 / x0.75).
-6. Damage = move power x 0.6 x type multiplier. Luck is the crit chance (x1.5). Knock out all 3 enemy cards to win.
-7. Stat budget: in /cardadmin the five stats add up to at most Common 72, Uncommon 78, Rare 84, Epic 90, Legendary 96, Mythic 104.
-8. **Item cards** (2 in every pack): before the battle, right-click your side of the mat (or one of your cards) with up to 2 item cards. Once both teams are full there is a 5-second countdown to add them.
-   On your turn use one item from the turn menu (costs energy, doesn't end your turn). Quick items heal or give energy; traps are set face down and spring on the opponent's next matching attack.
-   Bandage (heal 6), Herbal Tonic (heal 10), Mending Potion (heal 16), Energy Drink (+2 energy); traps: Spike Trap (attacker takes 6), Decoy (halves a hit), Snare (attacker skips its next action), Mirror Ward (attacker takes half the damage), Last Stand (survive a knockout at 1 Health), Guardian Angel (survive a knockout at half Health).
-   Items you bring are returned after the battle. `/cardadmin give <player> item <id>` gives one.
-All numbers are in the `rules:` section of config.yml. `/cardadmin seed` adds 15 balanced test cards (placeholder skin).
-Timing is set in `config.yml`: `turn-menu-delay-ticks` and `pause-after-attack-ticks`.
+1. Right-click your side of a mat to place your deck there (a card stack appears in your deck slot).
+   When both decks are down, both are shuffled. `/sc solo` plays the computer instead.
+2. Each player draws 5 (always at least 2 characters), puts up to 3 characters face down, and clicks Ready.
+   The cards flip (Epic and higher with a rarity flair). Higher total Dexterity goes first; the other side starts with +1 energy.
+3. Each turn: draw 1 (an empty deck gives your rival a point instead), +2 energy (max 6). Then play up to
+   1 character into an empty slot and 1 item or trap, and attack once. Attacking ends your turn; /sc end passes.
+4. Moves cost energy by power: 1 (up to 12), 2 (up to 24), 3 (above). Luck moves refund 1. Each card acts once per round.
+5. Types: a card's type is its highest of Strength / Dexterity / Magicing. Strength beats Magicing, Magicing beats
+   Dexterity, Dexterity beats Strength (x1.5 / x0.75). Damage = power x 0.6 x type (x1.5 on a crit; Luck is the crit chance).
+6. A knocked-out card goes to its owner's discard pile and scores 1 point. First to 3 points wins; a player with no
+   characters left anywhere loses. Hand limit 7.
+7. Items (22): quick items heal, give energy, draw cards or boost an attack; traps are set face down and the first one
+   that applies springs on the rival's next attack. One item per turn; using one doesn't end your turn.
+All numbers are in the `rules:` section of config.yml. Timing: `turn-menu-delay-ticks`, `pause-after-attack-ticks`.
 
-Players: `/sneakycards turn` reopens the menu (or right-click one of your cards), `/sneakycards forfeit`, `/sneakycards help`.
-Sneak + right-click one of your cards before the battle starts to take it back.
-
+### Strongest deck right now: "Brick Wall"
+Found by simulating thousands of games between legal decks (the computer plays it in `/sc solo`; `/cardadmin testdeck`
+gives it to you). It won about 96% against random decks and 69% against the other top decks.
+Brick Bronson x2, Rusty Rourke x2, Tunnel Tess, Nyx Nightwire, Energy Drink x2, Herbal Tonic x2, Bandage, Decoy,
+Spike Trap, Guardian Angel, Whetstone (deck cost 33).
 ## Holographic cards
 Each character card from a pack has a `holo-chance` (default 3%, about one holo every 11 packs) to be holographic. Pulling one plays a reveal only you see: the card rises in front of you spinning inside a rainbow ring of sparkles, bursts with a "✦ HOLOGRAPHIC ✦" title, then flies into your inventory. Holo cards have a shifting rainbow foil on the card and, in battle, a mannequin that floats a little higher, sways slowly and has two colour-shifting sparkles drifting around it. Holo cards are stored separately in the binder and come back as holo after battles. `/cardadmin give <player> card <id> 1 holo` gives one.
 
@@ -67,6 +76,7 @@ Edit `skin:` in `cards.yml` for the demo card, then `/cardadmin reload`.
     /cardadmin give <player> pack [n]  |  give <player> card <id> [n]
     /cardadmin binder [player]         give a binder (players also have /binder)
     /cardadmin mat ...                 see above
+    /cardadmin testdeck [player]       give the Brick Wall deck (adds the cards to the binder and sets it as the deck)
     /cardadmin cards                   list every card: click to edit, shift-click twice to delete
     /cardadmin edit <id>               open a card in the creator; the green button becomes Save changes
     /cardadmin delete <id> confirm     delete a card (it disappears from packs and binders)
