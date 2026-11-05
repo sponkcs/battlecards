@@ -50,6 +50,7 @@ final class HoloReveal {
         Vector dir = eye.getDirection().setY(0);
         if (dir.lengthSquared() < 1e-6) dir = new Vector(0, 0, 1);
         dir.normalize();
+        final Vector toward = dir.clone();
         Location spot = eye.clone().add(dir.clone().multiply(1.6)).add(0, -0.15, 0);
         spot.setYaw(eye.getYaw()); spot.setPitch(0);
         ItemDisplay d = p.getWorld().spawn(spot, ItemDisplay.class, e -> {
@@ -102,7 +103,7 @@ final class HoloReveal {
                     double f = (t - 70) / 10.0;
                     d.setInterpolationDelay(0); d.setInterpolationDuration(2);
                     d.setTransformation(tf(0f, (float) Math.max(0.05, 1 - f), (float) (0.25 - f * 0.6)));
-                    d.teleport(d.getLocation().add(dir.clone().multiply(-0.12)));
+                    d.teleport(d.getLocation().add(toward.clone().multiply(-0.12)));
                 }
                 if (t == 80) p.playSound(p.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.8f, 1.2f);
                 if (t++ > 82) { d.remove(); cancel(); next(plugin, p); }
