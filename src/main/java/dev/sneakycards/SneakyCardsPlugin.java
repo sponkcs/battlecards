@@ -30,6 +30,8 @@ public final class SneakyCardsPlugin extends JavaPlugin {
         binders = new BinderStore(this);
         binders.load();
         binders.startAutosave();
+        decks = new DeckStore(this);
+        decks.load();
         prompts = new PromptManager();
         displays = new DisplayManager(this);
         battles = new BattleManager(this);
@@ -53,6 +55,7 @@ public final class SneakyCardsPlugin extends JavaPlugin {
         if (displays != null) displays.clearAll();
         if (registry != null) registry.save();
         if (binders != null) binders.save();
+        if (decks != null) decks.save();
     }
 
     public void sendPack(Player p) {
@@ -72,6 +75,8 @@ public final class SneakyCardsPlugin extends JavaPlugin {
     }
 
     private Rules rules;
+    private DeckStore decks;
+    public DeckStore decks() { return decks; }
     public Rules rules() { return rules; }
     public Draft draft(Player p) { return drafts.computeIfAbsent(p.getUniqueId(), k -> new Draft()); }
     public CardRegistry registry() { return registry; }

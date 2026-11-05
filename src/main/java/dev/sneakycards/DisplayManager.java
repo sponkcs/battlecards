@@ -32,7 +32,7 @@ public final class DisplayManager {
         Anim anim = Anim.NONE; int animTick = 0; long age = 0;
         // battle state
         int hp, maxHp; boolean ko = false; boolean acted = false; boolean faceDown = false; boolean stunned = false; boolean holo = false;   // acted: already used its action this round
-        Mat mat; int side = -1, col = -1;
+        Mat mat; int side = -1, col = -1; HandCard source;   // source: the deck card this came from
         // attack animation state
         Vector dir; double reach = 1.0; Placed target; Runnable onImpact, onDone;
         boolean bigHit = false;   // the hurt animation is for a critical hit
@@ -61,13 +61,18 @@ public final class DisplayManager {
     /** faceDown: shows the card back and no mannequin until {@link #reveal} is called (used on game mats). */
     public Placed place(Player owner, Card card, Location top, float yaw, boolean faceDown, boolean holo) {
         int max = plugin.getConfig().getInt("max-cards-per-player", 3);
-        long mine = placed.stream().filter(p -> p.owner.equals(owner.getUniqueId())).count();
+        long mine = placed.stream().filter(p -> p.owner.equals(owner.getUniqueId()) && p.mat == null).count();
         if (mine >= max) {
             owner.sendMessage(Component.text("You can only have " + max + " cards in play.", NamedTextColor.RED));
             return null;
         }
+        return placeFor(owner.getUniqueId(), card, top, yaw, faceDown, holo);
+    }
+
+    /** Places a card for any owner (a player or the solo-battle computer), without the per-player limit. */
+    public Placed placeFor(UUID owner, Card card, Location top, float yaw, boolean faceDown, boolean holo) {
         World w = top.getWorld();
-        Placed p = new Placed(owner.getUniqueId(), card, top.clone(), yaw);
+        Placed p = new Placed(owner, card, top.clone(), yaw);
         p.maxHp = card.stat(Stat.HEALTH);
         p.hp = p.maxHp;
         p.faceDown = faceDown;
@@ -85,7 +90,7 @@ public final class DisplayManager {
             d.setPersistent(false);
         });
         p.hit = w.spawn(top.clone(), Interaction.class, i -> {
-            i.setInteractionWidth(0.7f);
+            i.setInteractionWidth(0.6f);
             i.setInteractionHeight((float) (headTop + 0.1));
             i.setResponsive(true);
             i.setPersistent(false);
@@ -117,7 +122,7 @@ public final class DisplayManager {
         // ItemDisplay turns its item 180 degrees around Y, so +90 about X puts the card's front face up
         // with its top pointing away from the owner (readable from their seat).
         return new Transformation(new Vector3f(0, lift, 0), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0),
-                new Vector3f(1.08f * width, 1.08f, 1.08f), new AxisAngle4f());
+                new Vector3f(0.92f * width, 0.92f, 0.92f), new AxisAngle4f());
     }
 
     private void spawnMannequin(Placed p) {

@@ -71,6 +71,9 @@ public final class Listeners implements Listener {
         } else if (h instanceof BattleMenu m) {
             e.setCancelled(true);
             if (e.getClickedInventory() == top) m.click(e.getRawSlot());
+        } else if (h instanceof DeckMenu m) {
+            e.setCancelled(true);
+            if (e.getClickedInventory() == top) m.click(e.getRawSlot());
         } else if (h instanceof BinderMenu m) {
             e.setCancelled(true);
             if (e.getClickedInventory() == top) { m.click(e.getRawSlot()); return; }
@@ -89,7 +92,7 @@ public final class Listeners implements Listener {
     @EventHandler
     public void onDrag(InventoryDragEvent e) {
         InventoryHolder h = e.getView().getTopInventory().getHolder();
-        if (h instanceof AdminMenu || h instanceof CardListMenu || h instanceof BinderMenu || h instanceof BackgroundMenu || h instanceof BattleMenu) e.setCancelled(true);
+        if (h instanceof AdminMenu || h instanceof CardListMenu || h instanceof BinderMenu || h instanceof BackgroundMenu || h instanceof BattleMenu || h instanceof DeckMenu) e.setCancelled(true);
     }
 
     @EventHandler
@@ -112,7 +115,7 @@ public final class Listeners implements Listener {
         }
         if (items.cardId(it) != null && e.getClickedBlock() != null) {
             e.setCancelled(true);
-            p.sendMessage(Component.text("Cards are played on a game mat. Place a mat, then right-click one of its slots.", NamedTextColor.YELLOW));
+            p.sendMessage(Component.text("Cards are played from your deck: put them in your binder, build a deck there, then right-click your side of a mat.", NamedTextColor.YELLOW));
         }
     }
 
@@ -126,15 +129,9 @@ public final class Listeners implements Listener {
         var placed = plugin.displays().byEntity(ent.getUniqueId());
         if (placed != null) {
             e.setCancelled(true);
-            if (!placed.owner.equals(p.getUniqueId())) return;
+            if (placed.mat == null && !placed.owner.equals(p.getUniqueId())) return;
             if (placed.mat != null) {
-                ItemStack held = p.getInventory().getItemInMainHand();
-                if (placed.mat.state == Mat.State.WAITING && plugin.items().itemType(held) != null) {
-                    battles.slotClick(p, placed.mat, placed.side, placed.col);   // brings the item card
-                    return;
-                }
-                if (p.isSneaking()) battles.pickUpCard(p, placed);
-                else if (placed.mat.state == Mat.State.FIGHTING) battles.openTurnMenu(p);
+                battles.cardClick(p, placed);
             } else if (p.isSneaking()) {
                 plugin.displays().remove(placed);
                 Items.give(p, plugin.items().card(placed.card, placed.holo));
@@ -148,7 +145,8 @@ public final class Listeners implements Listener {
         if (slot == null) return;
         if (slot[0] < 0) {
             if (p.isSneaking()) battles.pickUpMat(p, mat);
-            else p.sendMessage(Component.text("Hold a card and right-click a slot on your side. Sneak + right-click here to pick the mat up.", NamedTextColor.GRAY));
+            else if (mat.sideOf(p.getUniqueId()) >= 0 && mat.state != Mat.State.WAITING) battles.openMenu(p);
+            else p.sendMessage(Component.text("Right-click your side to place your deck, or use /sc solo. Sneak + right-click here to pick the mat up.", NamedTextColor.GRAY));
         } else {
             battles.slotClick(p, mat, slot[0], slot[1]);
         }

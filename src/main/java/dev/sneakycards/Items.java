@@ -103,6 +103,8 @@ public final class Items {
         return it;
     }
 
+    public ItemStack of(HandCard h) { return h.isChar() ? card(h.card, h.holo) : itemCard(h.item); }
+
     /** An item or trap card. */
     public ItemStack itemCard(ItemType type) {
         ItemStack it = new ItemStack(Material.PAPER);
@@ -125,6 +127,16 @@ public final class Items {
     public ItemType itemType(ItemStack it) {
         if (it == null || !it.hasItemMeta()) return null;
         return ItemType.parse(it.getItemMeta().getPersistentDataContainer().get(itemKey, PersistentDataType.STRING));
+    }
+
+    /** A player's deck lying on the mat: a stack of card backs (the plugin scales its height to the cards left). */
+    public ItemStack deckStack() {
+        ItemStack it = new ItemStack(Material.PAPER);
+        ItemMeta m = it.getItemMeta();
+        model(m, "deck_stack");
+        m.displayName(t("Deck", NamedTextColor.GRAY));
+        it.setItemMeta(m);
+        return it;
     }
 
     /** Shown on the mat before a battle starts, so opponents can't see the card. */

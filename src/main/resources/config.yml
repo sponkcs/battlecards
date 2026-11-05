@@ -2,7 +2,7 @@ cards-per-pack: 3
 holo-chance: 0.03            # chance for each character card in a pack to be holographic (0.03 = 3%: about 1 holo every 11 packs)
 god-pack-chance: 0.0         # chance that any pack secretly opens as a god pack (all holo, Rare or better); 0 = only summoned ones
 items-per-pack: 2            # item/trap cards added to each pack
-start-countdown-ticks: 100   # once both teams are full, time to add item cards before the battle starts
+start-countdown-ticks: 100   # once both decks are on the mat, wait this long before shuffling
 pack-cooldown-ms: 400        # minimum time between pack openings per player
 max-cards-per-player: 3     # cards a player can have on the mat at once
 mannequin-hover: 0.3        # how far the mannequin floats above its card (blocks)
@@ -15,7 +15,9 @@ resource-pack:
   sha1: ""                  # 40-character sha1 of the zip (printed by tools/make_pack.py)
   required: false
 rules:
-  items-per-battle: 2          # item cards each player may bring
+  deck-cost-cap: 35            # a deck's cards cost Common 1 ... Mythic 6 each
+  points-to-win: 3             # every knockout scores 1 point
+  hand-limit: 7                # cards drawn past this go to the discard pile
   team-cost-cap: 10            # rarity costs: Common 1, Uncommon 2, Rare 3, Epic 4, Legendary 5, Mythic 6
   energy-per-turn: 2
   energy-max: 6
@@ -25,3 +27,4 @@ rules:
   crit-multiplier: 1.5
   type-advantage: 1.5          # Strength > Magicing > Dexterity > Strength
   type-disadvantage: 0.75
+# solo-deck: [ ... ]           # the computer's deck in /sc solo (binder keys); default is the "Brick Wall" deck

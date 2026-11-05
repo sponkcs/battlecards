@@ -38,6 +38,17 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 plugin.registry().all().forEach(card -> s.sendMessage(Component.text(" • " + card.id() + " (" + card.rarity().label + ", " + (card.title().isBlank() ? "no title" : card.title()) + ")", NamedTextColor.GRAY)));
             }
             case "mat" -> mat(s, a);
+            case "testdeck" -> {    // puts the Brick Wall deck into a binder and makes it that player's deck
+                Player t = a.length > 1 ? Bukkit.getPlayerExact(a[1]) : (s instanceof Player p ? p : null);
+                if (t == null) { say(s, "Player not found."); return true; }
+                List<String> deck = Ai.deck(plugin);
+                java.util.Map<String, Integer> need = new java.util.HashMap<>();
+                for (String k : deck) need.merge(k, 1, Integer::sum);
+                var own = plugin.binders().counts(t.getUniqueId());
+                need.forEach((k, n) -> { int have = own.getOrDefault(k, 0); if (have < n) plugin.binders().add(t.getUniqueId(), k, n - have); });
+                plugin.decks().set(t.getUniqueId(), deck);
+                say(s, "Gave " + t.getName() + " the Brick Wall deck (in their binder and set as their deck).");
+            }
             case "godpack" -> {     // hidden: not listed in tab completion, usage or help
                 Player t = a.length > 1 ? Bukkit.getPlayerExact(a[1]) : (s instanceof Player p ? p : null);
                 if (t == null) { say(s, "Player not found."); return true; }
@@ -145,7 +156,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
-        if (a.length == 1) return List.of("give", "binder", "mat", "seed", "cards", "edit", "delete", "place", "move", "hurt", "clear", "list", "pack", "reload");
+        if (a.length == 1) return List.of("give", "binder", "mat", "seed", "testdeck", "cards", "edit", "delete", "place", "move", "hurt", "clear", "list", "pack", "reload");
         if (a.length == 2 && (a[0].equalsIgnoreCase("place") || a[0].equalsIgnoreCase("edit") || a[0].equalsIgnoreCase("delete"))) return plugin.registry().all().stream().map(Card::id).toList();
         if (a.length == 2 && a[0].equalsIgnoreCase("mat")) return List.of("classic", "purple", "neon", "remove");
         if (a.length == 2 && a[0].equalsIgnoreCase("move")) return List.of("1", "2");

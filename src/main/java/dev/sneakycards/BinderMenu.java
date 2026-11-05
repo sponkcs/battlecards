@@ -21,7 +21,7 @@ import java.util.Map;
 public final class BinderMenu implements InventoryHolder {
     private static final int[] SLOTS = buildSlots();   // container slots that are card sleeves (skips column 4)
     private static final int PER_PAGE = SLOTS.length;    // 40
-    private static final int PREV = 45, INFO = 49, NEXT = 53;
+    private static final int PREV = 45, DECK = 47, INFO = 49, NEXT = 53;
 
     private static int[] buildSlots() {
         int[] out = new int[40]; int n = 0;
@@ -86,11 +86,15 @@ public final class BinderMenu implements InventoryHolder {
         inv.setItem(INFO, it.menu("info", "Page " + (page + 1) + " of " + pages, NamedTextColor.AQUA, 1,
                 list.size() + " different cards", "Click a card to take one", "Click a card in your inventory to store it"));
         if (page < pages - 1) inv.setItem(NEXT, it.menu("next", "Next page", NamedTextColor.WHITE, 1));
+        int inDeck = plugin.decks().get(player.getUniqueId()).size();
+        inv.setItem(DECK, it.menu("create", "Deck builder", NamedTextColor.GOLD, Math.max(1, inDeck),
+                "Your deck: " + inDeck + "/" + DeckStore.SIZE + " cards", "Click to build your battle deck"));
     }
 
     public void click(int slot) {
         if (slot == PREV && page > 0) { page--; render(); return; }
         if (slot == NEXT) { page++; render(); return; }
+        if (slot == DECK) { Bukkit.getScheduler().runTask(plugin, () -> new DeckMenu(plugin, player).open()); return; }
         int idx = -1;
         for (int i = 0; i < SLOTS.length; i++) if (SLOTS[i] == slot) idx = i;
         if (idx < 0 || idx >= shown.size()) return;

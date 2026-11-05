@@ -21,18 +21,21 @@ public final class PlayCommand implements CommandExecutor, TabCompleter {
         String sub = a.length == 0 ? "help" : a[0].toLowerCase();
         switch (sub) {
             case "turn", "menu" -> plugin.battles().openTurnMenu(p);
+            case "solo", "practice" -> plugin.battles().solo(p);
+            case "deck" -> new DeckMenu(plugin, p).open();
+            case "end", "pass" -> plugin.battles().endTurn(p);
             case "forfeit", "leave" -> plugin.battles().forfeit(p);
             default -> {
                 String[] rules = {
                         "SneakyCards rules",
-                        "1. Play 3 different cards on your side of a mat. Team cost max 10 (Common 1 ... Mythic 6).",
-                        "2. Higher total Dexterity goes first (tie: coin flip). The other side starts with +1 energy.",
-                        "3. Each turn you gain 2 energy (max 6). Moves cost 1-3 energy; Luck moves refund 1. Or Rest for +1.",
-                        "4. Each card acts once per round: use all your cards before any can act again.",
-                        "5. Types: Strength > Magicing > Dexterity > Strength. Advantage x1.5, disadvantage x0.75.",
-                        "6. Luck is the crit chance (x1.5 damage). Knock out all 3 enemy cards to win.",
-                        "7. Items: bring up to 2 item cards (right-click your side before the battle). Use one per turn from the menu: heals, energy, or face-down traps.",
-                        "Commands: /sneakycards turn (reopen the turn menu), /sneakycards forfeit, /binder"};
+                        "1. Build a 15-card deck in your binder (/binder, Deck builder): 6+ characters, max 2 of a card, deck cost 35 or less.",
+                        "2. Right-click your side of a mat to place your deck (or /sc solo to play the computer). Both decks are shuffled.",
+                        "3. Draw 5, put up to 3 characters face down, click Ready. They flip; higher total Dexterity goes first.",
+                        "4. Each turn: draw 1, +2 energy (max 6). Play 1 character and 1 item or trap, then attack once (ends your turn).",
+                        "5. Moves cost 1-3 energy; Luck moves refund 1. Each card acts once per round.",
+                        "6. Types: Strength > Magicing > Dexterity > Strength (x1.5 / x0.75). Luck is the crit chance (x1.5).",
+                        "7. Each knockout scores 1 point. First to 3 wins. Hand limit 7; an empty deck gives your rival a point each turn.",
+                        "Commands: /sc solo, /sc turn (open the battle menu), /sc end (end turn), /sc deck, /sc forfeit, /binder"};
                 for (int i = 0; i < rules.length; i++) p.sendMessage(Component.text(rules[i], i == 0 ? NamedTextColor.GOLD : NamedTextColor.GRAY));
             }
         }
@@ -41,6 +44,6 @@ public final class PlayCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
-        return a.length == 1 ? List.of("help", "turn", "forfeit") : List.of();
+        return a.length == 1 ? List.of("help", "solo", "turn", "end", "deck", "forfeit") : List.of();
     }
 }

@@ -215,6 +215,19 @@ for bk in BACKGROUNDS:
             {"type": "minecraft:model", "model": f"{NS}:item/card_holo_overlay"},
             {"type": "minecraft:special", "base": f"{NS}:item/card_head", "model": {"type": "minecraft:player_head"}}]}})
 
+# a deck on the mat: a box of card backs; the plugin scales its thickness to the cards left
+edge = Image.new("RGBA", (16, 16), (236, 228, 208, 255)); ed = ImageDraw.Draw(edge)
+for y in range(0, 16, 2): ed.line([(0, y), (15, y)], fill=(190, 178, 156, 255))
+edge.save(path("assets", NS, "textures", "item", "deck_edge.png"))
+E = {"uv": [0, 0, 16, 16], "texture": "#edge"}
+wjson(path("assets", NS, "models", "item", "deck_stack.json"), {
+    "parent": f"{NS}:item/card_base",
+    "textures": {"back": f"{NS}:item/card_back", "edge": f"{NS}:item/deck_edge", "particle": f"{NS}:item/card_back"},
+    "elements": [{"from": [3, 1, 6], "to": [13, 15, 10], "faces": {
+        "south": {"uv": [0, 0, 10, 14], "texture": "#back"}, "north": {"uv": [0, 0, 10, 14], "texture": "#back"},
+        "east": E, "west": E, "up": E, "down": E}}]})
+wjson(path("assets", NS, "items", "deck_stack.json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/deck_stack"}})
+
 # face-down card shown on the mat until the battle starts (card back on both sides, no head layer)
 wjson(path("assets", NS, "models", "item", "card_facedown.json"),
       {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/card_back", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/card_back"}})
