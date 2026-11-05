@@ -27,6 +27,28 @@ final class Mat {
     State state = State.WAITING;
     int turn = -1;                        // side whose turn it is
     final int[] energy = new int[2];
+    /** Item cards each side brought (still in hand), all items brought (returned after the battle), and set traps. */
+    @SuppressWarnings("unchecked")
+    final java.util.List<ItemType>[] hand = new java.util.List[]{new java.util.ArrayList<>(), new java.util.ArrayList<>()};
+    @SuppressWarnings("unchecked")
+    final java.util.List<ItemType>[] brought = new java.util.List[]{new java.util.ArrayList<>(), new java.util.ArrayList<>()};
+    @SuppressWarnings("unchecked")
+    final java.util.List<Trap>[] traps = new java.util.List[]{new java.util.ArrayList<>(), new java.util.ArrayList<>()};
+    boolean itemUsedThisTurn = false;
+    boolean countdown = false;
+    int countdownId = 0;            // both teams are full and the battle is about to start
+
+    static final class Trap {
+        final ItemType type; org.bukkit.entity.ItemDisplay display;
+        Trap(ItemType type) { this.type = type; }
+    }
+
+    /** Where a set trap lies: on the centre strip in front of that side, left or right of centre. */
+    org.bukkit.Location trapSpot(int side, int index) {
+        double z = side == 0 ? -0.28 : 0.28;
+        double x = (index == 0 ? -0.45 : 0.45) * (side == 0 ? 1 : -1);
+        return center.clone().add(forward().multiply(z)).add(right().multiply(x));
+    }
     boolean busy = false;                 // true while an attack animation plays
 
     Mat(Location center, float yaw, MatVariant variant) {

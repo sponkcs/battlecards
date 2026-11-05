@@ -31,7 +31,7 @@ public final class DisplayManager {
         ItemDisplay face; Interaction hit; Mannequin man; TextDisplay preview, hpText;
         Anim anim = Anim.NONE; int animTick = 0; long age = 0;
         // battle state
-        int hp, maxHp; boolean ko = false; boolean acted = false; boolean faceDown = false;   // acted: already used its action this round
+        int hp, maxHp; boolean ko = false; boolean acted = false; boolean faceDown = false; boolean stunned = false;   // acted: already used its action this round
         Mat mat; int side = -1, col = -1;
         // attack animation state
         Vector dir; double reach = 1.0; Placed target; Runnable onImpact, onDone;

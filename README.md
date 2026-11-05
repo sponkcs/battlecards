@@ -39,6 +39,10 @@ Mats are not saved: they disappear on restart or when the chunk unloads, and car
 5. Types: a card's type is its highest of Strength / Dexterity / Magicing. Strength beats Magicing, Magicing beats Dexterity, Dexterity beats Strength (x1.5 / x0.75).
 6. Damage = move power x 0.6 x type multiplier. Luck is the crit chance (x1.5). Knock out all 3 enemy cards to win.
 7. Stat budget: in /cardadmin the five stats add up to at most Common 72, Uncommon 78, Rare 84, Epic 90, Legendary 96, Mythic 104.
+8. **Item cards** (2 in every pack): before the battle, right-click your side of the mat (or one of your cards) with up to 2 item cards. Once both teams are full there is a 5-second countdown to add them.
+   On your turn use one item from the turn menu (costs energy, doesn't end your turn). Quick items heal or give energy; traps are set face down and spring on the opponent's next matching attack.
+   Bandage (heal 6), Herbal Tonic (heal 10), Mending Potion (heal 16), Energy Drink (+2 energy); traps: Spike Trap (attacker takes 6), Decoy (halves a hit), Snare (attacker skips its next action), Mirror Ward (attacker takes half the damage), Last Stand (survive a knockout at 1 Health), Guardian Angel (survive a knockout at half Health).
+   Items you bring are returned after the battle. `/cardadmin give <player> item <id>` gives one.
 All numbers are in the `rules:` section of config.yml. `/cardadmin seed` adds 15 balanced test cards (placeholder skin).
 Timing is set in `config.yml`: `turn-menu-delay-ticks` and `pause-after-attack-ticks`.
 

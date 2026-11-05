@@ -20,7 +20,7 @@ import java.util.List;
 
 /** Builds every custom item. Models come from the resource pack (namespace "sneakycards"). */
 public final class Items {
-    final NamespacedKey cardKey, packKey, binderKey, matKey;
+    final NamespacedKey cardKey, packKey, binderKey, matKey, itemKey;
 
     private final SneakyCardsPlugin plugin;
 
@@ -30,6 +30,7 @@ public final class Items {
         packKey = new NamespacedKey(plugin, "pack");
         binderKey = new NamespacedKey(plugin, "binder");
         matKey = new NamespacedKey(plugin, "mat");
+        itemKey = new NamespacedKey(plugin, "item");
     }
 
     /** The card's skin as a profile: used by the mannequin and by the head drawn on the card item. */
@@ -91,6 +92,30 @@ public final class Items {
         // the resource pack draws this profile's head in the card's picture window
         it.setData(DataComponentTypes.PROFILE, profile(c));
         return it;
+    }
+
+    /** An item or trap card. */
+    public ItemStack itemCard(ItemType type) {
+        ItemStack it = new ItemStack(Material.PAPER);
+        ItemMeta m = it.getItemMeta();
+        model(m, "item_" + type.key());
+        m.displayName(t(type.label, type.rarity.color()).decorate(TextDecoration.BOLD));
+        List<Component> lore = new ArrayList<>();
+        lore.add(t(type.rarity.label + (type.kind == ItemType.Kind.TRAP ? " Trap" : " Item"), type.rarity.color()));
+        lore.add(t(type.description, NamedTextColor.WHITE));
+        lore.add(t("Energy cost: " + type.cost, NamedTextColor.AQUA));
+        lore.add(Component.empty());
+        lore.add(t("Before a battle: right-click your side", NamedTextColor.DARK_GRAY));
+        lore.add(t("of the mat to bring it (max 2).", NamedTextColor.DARK_GRAY));
+        m.lore(lore);
+        m.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, type.name());
+        it.setItemMeta(m);
+        return it;
+    }
+
+    public ItemType itemType(ItemStack it) {
+        if (it == null || !it.hasItemMeta()) return null;
+        return ItemType.parse(it.getItemMeta().getPersistentDataContainer().get(itemKey, PersistentDataType.STRING));
     }
 
     /** Shown on the mat before a battle starts, so opponents can't see the card. */

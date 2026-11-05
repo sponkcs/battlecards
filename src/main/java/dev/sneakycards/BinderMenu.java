@@ -37,7 +37,7 @@ public final class BinderMenu implements InventoryHolder {
     private final SneakyCardsPlugin plugin;
     private final Player player;
     private final Inventory inv;
-    private final List<Card> shown = new ArrayList<>();
+    private final List<Entry> shown = new ArrayList<>();
     private int page = 0;
 
     BinderMenu(SneakyCardsPlugin plugin, Player player) {
@@ -50,23 +50,36 @@ public final class BinderMenu implements InventoryHolder {
     public void open() { player.openInventory(inv); }
     @Override public Inventory getInventory() { return inv; }
 
+    /** One binder entry: a character card id, or "item:NAME" for an item card. */
+    private record Entry(String key, ItemStack icon, int rarity, String name, boolean item) { }
+
     public void render() {
         inv.clear();
         shown.clear();
         Items it = plugin.items();
         Map<String, Integer> own = plugin.binders().counts(player.getUniqueId());
-        List<Card> list = own.keySet().stream().map(plugin.registry()::get).filter(c -> c != null)
-                .sorted(Comparator.comparing((Card c) -> c.rarity().ordinal()).reversed().thenComparing(Card::name)).toList();
+        List<Entry> list = new ArrayList<>();
+        for (var e : own.entrySet()) {
+            if (e.getKey().startsWith("item:")) {
+                ItemType t = ItemType.parse(e.getKey().substring(5));
+                if (t != null) list.add(new Entry(e.getKey(), it.itemCard(t), t.rarity.ordinal(), t.label, true));
+            } else {
+                Card c = plugin.registry().get(e.getKey());
+                if (c != null) list.add(new Entry(e.getKey(), it.card(c), c.rarity().ordinal(), c.name(), false));
+            }
+        }
+        // characters first, then items; each by rarity (highest first) and name
+        list.sort(Comparator.comparing(Entry::item).thenComparing(Comparator.comparingInt(Entry::rarity).reversed()).thenComparing(Entry::name));
         int pages = Math.max(1, (int) Math.ceil(list.size() / (double) PER_PAGE));
         page = Math.max(0, Math.min(page, pages - 1));
         for (int i = 0; i < PER_PAGE; i++) {
             int idx = page * PER_PAGE + i;
             if (idx >= list.size()) break;
-            Card c = list.get(idx);
-            ItemStack stack = it.card(c);
-            stack.setAmount(Math.min(64, own.get(c.id())));
+            Entry en = list.get(idx);
+            ItemStack stack = en.icon();
+            stack.setAmount(Math.max(1, Math.min(64, own.get(en.key()))));
             inv.setItem(SLOTS[i], stack);
-            shown.add(c);
+            shown.add(en);
         }
         if (page > 0) inv.setItem(PREV, it.menu("prev", "Previous page", NamedTextColor.WHITE, 1));
         inv.setItem(INFO, it.menu("info", "Page " + (page + 1) + " of " + pages, NamedTextColor.AQUA, 1,
@@ -80,10 +93,11 @@ public final class BinderMenu implements InventoryHolder {
         int idx = -1;
         for (int i = 0; i < SLOTS.length; i++) if (SLOTS[i] == slot) idx = i;
         if (idx < 0 || idx >= shown.size()) return;
-        Card c = shown.get(idx);
-        if (!plugin.binders().take(player.getUniqueId(), c.id())) return;
-        var left = player.getInventory().addItem(plugin.items().card(c));
-        left.values().forEach(i -> player.getWorld().dropItemNaturally(player.getLocation(), i));
+        Entry en = shown.get(idx);
+        if (!plugin.binders().take(player.getUniqueId(), en.key())) return;
+        ItemStack one = en.icon().clone();
+        one.setAmount(1);
+        Items.give(player, one);
         render();
     }
 }

@@ -76,6 +76,7 @@ public final class Listeners implements Listener {
             if (e.getClickedInventory() == top) { m.click(e.getRawSlot()); return; }
             ItemStack it = e.getCurrentItem();
             String id = plugin.items().cardId(it);
+            if (id == null) { ItemType t = plugin.items().itemType(it); if (t != null) id = "item:" + t.name(); }
             if (id == null) return;
             int n = e.getClick().isShiftClick() ? it.getAmount() : 1;
             plugin.binders().add(e.getWhoClicked().getUniqueId(), id, n);
@@ -126,6 +127,11 @@ public final class Listeners implements Listener {
             e.setCancelled(true);
             if (!placed.owner.equals(p.getUniqueId())) return;
             if (placed.mat != null) {
+                ItemStack held = p.getInventory().getItemInMainHand();
+                if (placed.mat.state == Mat.State.WAITING && plugin.items().itemType(held) != null) {
+                    battles.slotClick(p, placed.mat, placed.side, placed.col);   // brings the item card
+                    return;
+                }
                 if (p.isSneaking()) battles.pickUpCard(p, placed);
                 else if (placed.mat.state == Mat.State.FIGHTING) battles.openTurnMenu(p);
             } else if (p.isSneaking()) {
@@ -170,6 +176,14 @@ public final class Listeners implements Listener {
             if (Items.give(p, plugin.items().card(c))) dropped = true;
             if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
             line.append(Items.t(c.name(), c.rarity().color()));
+        }
+        int items = plugin.getConfig().getInt("items-per-pack", 2);
+        if (items > 0) line.append(Component.text("  +  ", NamedTextColor.DARK_GRAY));
+        for (int i = 0; i < items; i++) {
+            ItemType t = ItemType.draw(rng);
+            if (Items.give(p, plugin.items().itemCard(t))) dropped = true;
+            if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
+            line.append(Items.t(t.label, t.rarity.color()));
         }
         p.sendMessage(line.build());
         if (dropped) p.sendMessage(Component.text("Your inventory was full, so some cards dropped at your feet.", NamedTextColor.YELLOW));

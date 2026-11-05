@@ -181,6 +181,15 @@ wjson(path("assets", NS, "models", "item", "card_base.json"), {
         "gui": {"rotation": [0,0,0], "scale": [1.1,1.1,1.1]},
         **{ctx: {"rotation": rot, "translation": tr, "scale": [c, c, c]} for ctx, (rot, tr, c) in CARD_DISPLAY.items() if ctx != "gui"}},
     "gui_light": "front"})
+# item and trap cards: same flat card model, no head layer
+from item_cards import ITEMS, item_front
+for ik, (irar, ikind) in ITEMS.items():
+    n = f"item_{ik}"
+    art = item_front(ik, RARITIES[irar], irar == "mythic"); save_card(n, art); sheet[n] = art
+    wjson(path("assets", NS, "models", "item", n + ".json"),
+          {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/{n}", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/{n}"}})
+    wjson(path("assets", NS, "items", n + ".json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/{n}"}})
+
 # face-down card shown on the mat until the battle starts (card back on both sides, no head layer)
 wjson(path("assets", NS, "models", "item", "card_facedown.json"),
       {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/card_back", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/card_back"}})

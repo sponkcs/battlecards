@@ -87,13 +87,20 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
     }
 
     private void give(CommandSender s, String[] a) {
-        if (a.length < 3) { say(s, "Usage: /cardadmin give <player> pack [amount] | card <id> [amount]"); return; }
+        if (a.length < 3) { say(s, "Usage: /cardadmin give <player> pack [amount] | card <id> [amount] | item <id> [amount]"); return; }
         Player t = Bukkit.getPlayerExact(a[1]);
         if (t == null) { say(s, "Player not found."); return; }
         if (a[2].equalsIgnoreCase("pack")) {
             int n = a.length > 3 ? parse(a[3]) : 1;
             Items.give(t, plugin.items().pack(n));
             say(s, "Gave " + n + " pack(s) to " + t.getName() + ".");
+        } else if (a[2].equalsIgnoreCase("item") && a.length > 3) {
+            ItemType type = ItemType.parse(a[3]);
+            if (type == null) { say(s, "No such item. Items: " + java.util.Arrays.stream(ItemType.values()).map(ItemType::key).toList()); return; }
+            org.bukkit.inventory.ItemStack item = plugin.items().itemCard(type);
+            item.setAmount(a.length > 4 ? parse(a[4]) : 1);
+            Items.give(t, item);
+            say(s, "Gave " + type.label + " to " + t.getName() + ".");
         } else if (a[2].equalsIgnoreCase("card") && a.length > 3) {
             Card card = plugin.registry().get(a[3]);
             if (card == null) { say(s, "No such card."); return; }
@@ -134,7 +141,8 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         if (a.length == 2 && (a[0].equalsIgnoreCase("place") || a[0].equalsIgnoreCase("edit") || a[0].equalsIgnoreCase("delete"))) return plugin.registry().all().stream().map(Card::id).toList();
         if (a.length == 2 && a[0].equalsIgnoreCase("mat")) return List.of("classic", "purple", "neon", "remove");
         if (a.length == 2 && a[0].equalsIgnoreCase("move")) return List.of("1", "2");
-        if (a.length == 3 && a[0].equalsIgnoreCase("give")) return List.of("pack", "card");
+        if (a.length == 3 && a[0].equalsIgnoreCase("give")) return List.of("pack", "card", "item");
+        if (a.length == 4 && a[0].equalsIgnoreCase("give") && a[2].equalsIgnoreCase("item")) return java.util.Arrays.stream(ItemType.values()).map(ItemType::key).toList();
         if (a.length == 3 && a[0].equalsIgnoreCase("delete")) return List.of("confirm");
         if (a.length == 4 && a[0].equalsIgnoreCase("give") && a[2].equalsIgnoreCase("card")) return plugin.registry().all().stream().map(Card::id).toList();
         return List.of();

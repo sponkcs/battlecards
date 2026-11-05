@@ -147,6 +147,8 @@ public final class BattleManager {
     public void slotClick(Player p, Mat m, int side, int col) {
         if (m.state != Mat.State.WAITING) { say(p, "A battle is in progress on this mat.", NamedTextColor.RED); return; }
         ItemStack hand = p.getInventory().getItemInMainHand();
+        ItemType itemType = plugin.items().itemType(hand);
+        if (itemType != null) { bringItem(p, m, side, hand, itemType); return; }
         String id = plugin.items().cardId(hand);
         Card card = id == null ? null : plugin.registry().get(id);
         if (card == null) { say(p, "Hold a card and right-click a slot to play it.", NamedTextColor.YELLOW); return; }
@@ -176,7 +178,7 @@ public final class BattleManager {
         if (p.getGameMode() != org.bukkit.GameMode.CREATIVE) hand.setAmount(hand.getAmount() - 1);
         p.playSound(p.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1f, 1f);
 
-        if (m.full(0) && m.full(1)) { start(m); return; }
+        if (m.full(0) && m.full(1)) { countdown(m); return; }
         if (m.full(side)) {
             say(p, "Your team is ready. Waiting for an opponent to fill the other side.", NamedTextColor.GREEN);
             if (m.players[1 - side] != null) say(Bukkit.getPlayer(m.players[1 - side]), nameOf(me) + "'s team is ready.", NamedTextColor.GRAY);
@@ -192,13 +194,117 @@ public final class BattleManager {
         displays().remove(pl);
         m.cards[pl.side][pl.col] = null;
         giveBack(pl.owner, pl.card);
+        if (m.countdown) { m.countdown = false; tell(m, Component.text("A card was picked up, so the countdown stopped.", NamedTextColor.GRAY)); }
         if (!m.hasCards(pl.side)) releaseSide(m, pl.side);
     }
 
     private void releaseSide(Mat m, int side) {
         UUID id = m.players[side];
         if (id != null) byPlayer.remove(id);
+        returnItems(m, side);
         m.players[side] = null;
+    }
+
+    // ---------------------------------------------------------------- item cards
+
+    /** Before a battle: right-click your side with an item card to bring it (max 2). */
+    private void bringItem(Player p, Mat m, int side, ItemStack hand, ItemType type) {
+        UUID me = p.getUniqueId();
+        if (m.players[side] == null || !m.players[side].equals(me)) { say(p, "Place a card on this side first, then add item cards.", NamedTextColor.YELLOW); return; }
+        int max = plugin.getConfig().getInt("rules.items-per-battle", 2);
+        if (m.brought[side].size() >= max) { say(p, "You can bring at most " + max + " item cards to a battle.", NamedTextColor.RED); return; }
+        m.hand[side].add(type);
+        m.brought[side].add(type);
+        if (p.getGameMode() != org.bukkit.GameMode.CREATIVE) hand.setAmount(hand.getAmount() - 1);
+        p.playSound(p.getLocation(), Sound.ITEM_BUNDLE_INSERT, 1f, 1.2f);
+        say(p, "Added " + type.label + " to your items (" + m.brought[side].size() + "/" + max + "). You get it back after the battle.", NamedTextColor.GREEN);
+    }
+
+    private void returnItems(Mat m, int side) {
+        UUID owner = m.players[side];
+        for (Mat.Trap t : m.traps[side]) if (t.display != null) t.display.remove();
+        m.traps[side].clear();
+        if (owner != null) for (ItemType t : m.brought[side]) giveBack(owner, t);
+        m.brought[side].clear();
+        m.hand[side].clear();
+    }
+
+    private void giveBack(UUID owner, ItemType t) {
+        Player p = Bukkit.getPlayer(owner);
+        if (p != null) Items.give(p, plugin.items().itemCard(t));
+        else plugin.binders().add(owner, "item:" + t.name(), 1);
+    }
+
+    /** Uses an item from the turn menu. target is your own card for heals, otherwise null. */
+    public void useItem(Player p, Mat m, int index, DisplayManager.Placed target) {
+        int side = m.sideOf(p.getUniqueId());
+        if (m.state != Mat.State.FIGHTING || m.busy || side != m.turn) return;
+        if (index < 0 || index >= m.hand[side].size()) return;
+        if (m.itemUsedThisTurn) { say(p, "You already used an item this turn.", NamedTextColor.YELLOW); return; }
+        ItemType t = m.hand[side].get(index);
+        if (m.energy[side] < t.cost) { say(p, t.label + " costs " + t.cost + " energy; you have " + m.energy[side] + ".", NamedTextColor.YELLOW); return; }
+        if (t.kind == ItemType.Kind.TRAP && m.traps[side].size() >= 2) { say(p, "You already have 2 traps set.", NamedTextColor.YELLOW); return; }
+        World w = m.center.getWorld();
+        if (t.heals()) {
+            if (target == null || target.ko || target.side != side) { say(p, "Choose one of your cards to heal.", NamedTextColor.YELLOW); return; }
+            int before = target.hp;
+            target.hp = Math.min(target.maxHp, target.hp + t.amount);
+            displays().refreshHp(target);
+            displays().popup(target.base.clone().add(0, 1.05, 0), Component.text("+" + (target.hp - before), NamedTextColor.GREEN).decorate(TextDecoration.BOLD), 0.9f);
+            w.spawnParticle(Particle.HEART, target.base.clone().add(0, 0.7, 0), 4, 0.15, 0.15, 0.15, 0);
+            w.spawnParticle(Particle.HAPPY_VILLAGER, target.base.clone().add(0, 0.5, 0), 10, 0.2, 0.25, 0.2, 0);
+            w.playSound(target.base, Sound.ENTITY_GENERIC_DRINK, 0.8f, 1.2f);
+            tell(m, Component.text(p.getName() + " used ", NamedTextColor.WHITE).append(Items.t(t.label, t.rarity.color()))
+                    .append(Component.text(" on " + target.card.name() + " (+" + (target.hp - before) + " Health).", NamedTextColor.WHITE)));
+        } else if (t == ItemType.ENERGY_DRINK) {
+            w.playSound(m.center, Sound.ENTITY_GENERIC_DRINK, 0.8f, 1.5f);
+            tell(m, Component.text(p.getName() + " used ", NamedTextColor.WHITE).append(Items.t(t.label, t.rarity.color()))
+                    .append(Component.text(" (+" + t.amount + " energy).", NamedTextColor.WHITE)));
+        } else {
+            Mat.Trap trap = new Mat.Trap(t);
+            Location spot = m.trapSpot(side, m.traps[side].size());
+            trap.display = w.spawn(spot.clone().add(0, 0.075, 0), org.bukkit.entity.ItemDisplay.class, d -> {
+                d.setItemStack(plugin.items().cardBack());
+                d.setItemDisplayTransform(org.bukkit.entity.ItemDisplay.ItemDisplayTransform.FIXED);
+                d.setRotation(m.sideYaw(side) + 90f, 0);
+                d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0),
+                        new Vector3f(0.55f, 0.55f, 0.55f), new AxisAngle4f()));
+                d.setPersistent(false);
+            });
+            m.traps[side].add(trap);
+            w.playSound(spot, Sound.BLOCK_TRIPWIRE_ATTACH, 1f, 0.8f);
+            tell(m, Component.text(p.getName() + " set a trap card face down.", NamedTextColor.LIGHT_PURPLE));
+        }
+        m.energy[side] = Math.min(plugin.rules().energyMax(), m.energy[side] - t.cost + (t == ItemType.ENERGY_DRINK ? t.amount : 0));
+        m.hand[side].remove(index);
+        m.itemUsedThisTurn = true;
+    }
+
+    /** Picks the first of the defender's traps that applies to this hit, removes it and returns it (or null). */
+    private Mat.Trap springTrap(Mat m, int side, int dmg, DisplayManager.Placed tgt) {
+        for (Mat.Trap t : m.traps[side]) {
+            if (t.type.savesFromKo() && dmg < tgt.hp) continue;   // waits for a knockout blow
+            m.traps[side].remove(t);
+            return t;
+        }
+        return null;
+    }
+
+    private void revealTrap(Mat m, Mat.Trap t) {
+        if (t.display == null || !t.display.isValid()) return;
+        var d = t.display;
+        d.setItemStack(plugin.items().itemCard(t.type));
+        d.setInterpolationDelay(0);
+        d.setInterpolationDuration(6);
+        d.setTransformation(new Transformation(new Vector3f(0, 0.35f, 0), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0),
+                new Vector3f(0.7f, 0.7f, 0.7f), new AxisAngle4f()));
+        World w = d.getWorld();
+        Location l = d.getLocation().add(0, 0.4, 0);
+        w.spawnParticle(Particle.DUST, l, 20, 0.2, 0.15, 0.2, 0, new Particle.DustOptions(org.bukkit.Color.fromRGB(t.type.rarity.color.value()), 1f));
+        w.spawnParticle(Particle.ENCHANTED_HIT, l, 15, 0.2, 0.2, 0.2, 0.2);
+        w.playSound(l, Sound.BLOCK_PISTON_EXTEND, 0.8f, 1.6f);
+        w.playSound(l, Sound.ENTITY_EVOKER_CAST_SPELL, 0.6f, 1.4f);
+        Bukkit.getScheduler().runTaskLater(plugin, d::remove, 40L);
     }
 
     private void giveBack(UUID owner, Card c) {
@@ -231,8 +337,10 @@ public final class BattleManager {
             if (p != null && p.getOpenInventory().getTopInventory().getHolder() instanceof BattleMenu) p.closeInventory();
         }
         clearCards(m);
+        returnItems(m, 0); returnItems(m, 1);
         m.players[0] = null; m.players[1] = null;
         m.state = Mat.State.WAITING;
+        m.countdown = false;
         m.turn = -1;
         m.busy = false;
     }
@@ -245,10 +353,35 @@ public final class BattleManager {
         return sum;
     }
 
+    /** Both teams are full: a short countdown so players can still add item cards, then the battle starts. */
+    private void countdown(Mat m) {
+        if (m.countdown) return;
+        m.countdown = true;
+        final int id = ++m.countdownId;
+        long ticks = plugin.getConfig().getLong("start-countdown-ticks", 100);
+        tell(m, Component.text("Both teams are ready! The battle starts in " + (ticks / 20) + " seconds. Right-click one of your cards with an item card to bring it.", NamedTextColor.GOLD));
+        for (long t = ticks - 60; t < ticks; t += 20) {
+            final long left = (ticks - t) / 20;
+            if (t < 0) continue;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!m.countdown || m.countdownId != id || !mats.contains(m)) return;
+                for (UUID u : m.players) { Player p = u == null ? null : Bukkit.getPlayer(u); if (p != null) {
+                    p.sendActionBar(Component.text("Battle starts in " + left + "...", NamedTextColor.GOLD));
+                    p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.8f, 1.2f); } }
+            }, t);
+        }
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!m.countdown || m.countdownId != id || !mats.contains(m)) return;
+            m.countdown = false;
+            if (m.state == Mat.State.WAITING && m.full(0) && m.full(1)) start(m);
+        }, ticks);
+    }
+
     private void start(Mat m) {
         m.state = Mat.State.FIGHTING;
         m.energy[0] = 0; m.energy[1] = 0;
-        for (var row : m.cards) for (var c : row) if (c != null) c.acted = false;
+        for (var row : m.cards) for (var c : row) if (c != null) { c.acted = false; c.stunned = false; }
+        for (int s = 0; s < 2; s++) m.traps[s].clear();
         int d0 = dexterity(m, 0), d1 = dexterity(m, 1);
         int first;
         boolean coin = false;
@@ -284,10 +417,11 @@ public final class BattleManager {
         final int side = m.turn;
         Rules rules = plugin.rules();
         m.energy[side] = Math.min(rules.energyMax(), m.energy[side] + rules.energyPerTurn());
+        m.itemUsedThisTurn = false;
         boolean anyReady = false;
         for (var c : m.cards[side]) if (c != null && !c.ko && !c.acted) anyReady = true;
         if (!anyReady) {
-            for (var c : m.cards[side]) if (c != null) c.acted = false;
+            for (var c : m.cards[side]) if (c != null) { c.acted = c.stunned; c.stunned = false; }   // stunned cards sit this round out
             Player owner = Bukkit.getPlayer(m.players[side]);
             if (owner != null) say(owner, "New round: all your cards can act again.", NamedTextColor.AQUA);
         }
@@ -327,13 +461,53 @@ public final class BattleManager {
         m.energy[m.turn] = Math.min(plugin.rules().energyMax(), m.energy[m.turn] - cost + Rules.refund(mv));
         att.acted = true;
         boolean crit = rng.nextInt(100) < Math.min(100, att.card.stat(Stat.LUCK));
-        int dmg = plugin.rules().damage(att.card, mv, tgt.card, crit);
-        displays().attack(att, tgt, mv, () -> impact(m, att, tgt, mv, dmg, crit), () -> afterAttack(m));
+        int raw = plugin.rules().damage(att.card, mv, tgt.card, crit);
+        Mat.Trap trap = springTrap(m, tgt.side, raw, tgt);
+        int dmg = trap != null && trap.type == ItemType.DECOY ? Math.max(1, raw / 2) : raw;
+        displays().attack(att, tgt, mv, () -> impact(m, att, tgt, mv, dmg, crit, trap), () -> afterAttack(m));
     }
 
-    private void impact(Mat m, DisplayManager.Placed att, DisplayManager.Placed tgt, Move mv, int dmg, boolean crit) {
+    private void impact(Mat m, DisplayManager.Placed att, DisplayManager.Placed tgt, Move mv, int dmg, boolean crit, Mat.Trap trap) {
         if (m.state != Mat.State.FIGHTING) return;
         tgt.hp = Math.max(0, tgt.hp - dmg);
+        Component trapMsg = null;
+        if (trap != null) {
+            revealTrap(m, trap);
+            ItemType t = trap.type;
+            Component head = Component.text("Trap! ", NamedTextColor.LIGHT_PURPLE).append(Items.t(t.label, t.rarity.color())).append(Component.text(": ", NamedTextColor.LIGHT_PURPLE));
+            switch (t) {
+                case DECOY -> trapMsg = head.append(Component.text("the hit was halved.", NamedTextColor.WHITE));
+                case LAST_STAND, GUARDIAN_ANGEL -> {
+                    tgt.hp = t == ItemType.LAST_STAND ? 1 : Math.max(1, tgt.maxHp / 2);
+                    m.center.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, tgt.base.clone().add(0, 0.6, 0), 30, 0.2, 0.3, 0.2, 0.3);
+                    m.center.getWorld().playSound(tgt.base, Sound.ITEM_TOTEM_USE, 0.7f, 1.3f);
+                    trapMsg = head.append(Component.text(tgt.card.name() + " survives with " + tgt.hp + " Health!", NamedTextColor.WHITE));
+                }
+                case SPIKE_TRAP, MIRROR_WARD -> {
+                    int back = t == ItemType.SPIKE_TRAP ? t.amount : Math.max(1, dmg / 2);
+                    att.hp = Math.max(0, att.hp - back);
+                    displays().refreshHp(att);
+                    // the attacker is still mid-move: let its animation finish before it reacts
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (m.state != Mat.State.FIGHTING || !mats.contains(m) || att.ko) return;
+                        displays().hurt(att, tgt, false);
+                        displays().popup(att.base.clone().add(0, 1.05, 0), Component.text("-" + back, NamedTextColor.LIGHT_PURPLE).decorate(TextDecoration.BOLD), 0.9f);
+                    }, 14L);
+                    trapMsg = head.append(Component.text(att.card.name() + " takes " + back + " damage.", NamedTextColor.WHITE));
+                    if (att.hp <= 0) Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (m.state != Mat.State.FIGHTING || !mats.contains(m)) return;
+                        displays().knockOut(att);
+                        tell(m, Component.text(att.card.name() + " is knocked out!", NamedTextColor.RED));
+                    }, 30L);
+                }
+                case SNARE -> {
+                    att.stunned = true;
+                    m.center.getWorld().spawnParticle(Particle.ITEM_SLIME, att.base.clone().add(0, 0.5, 0), 15, 0.15, 0.2, 0.15, 0);
+                    trapMsg = head.append(Component.text(att.card.name() + " is stunned and will skip its next action.", NamedTextColor.WHITE));
+                }
+                default -> { }
+            }
+        }
         displays().refreshHp(tgt);
         displays().hurt(tgt, att, crit);
         Component num = crit
@@ -348,6 +522,7 @@ public final class BattleManager {
         if (mult > 1) msg = msg.append(Component.text(" Super effective!", NamedTextColor.GREEN));
         else if (mult < 1) msg = msg.append(Component.text(" Not very effective.", NamedTextColor.GRAY));
         tell(m, msg);
+        if (trapMsg != null) tell(m, trapMsg);
         if (tgt.hp <= 0) {
             // let the hit animation play before the card goes down
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -361,7 +536,7 @@ public final class BattleManager {
     /** Waits a moment after the move so players can see what happened, then checks for a winner. */
     private void afterAttack(Mat m) {
         long pause = plugin.getConfig().getLong("pause-after-attack-ticks", 30);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> nextTurn(m), Math.max(22L, pause));
+        Bukkit.getScheduler().runTaskLater(plugin, () -> nextTurn(m), Math.max(30L, pause));
     }
 
     private void nextTurn(Mat m) {

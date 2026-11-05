@@ -15,13 +15,13 @@ import java.util.List;
  * Click a card, then a move, then the enemy card to attack.
  */
 public final class BattleMenu implements InventoryHolder {
-    private static final int OWN = 1, MOVE = 10, ENEMY = 19, INFO = 5, FORFEIT = 7, REST = 16;
+    private static final int OWN = 1, MOVE = 10, ENEMY = 19, INFO = 5, FORFEIT = 7, REST = 16, ITEM = 13;
     private final SneakyCardsPlugin plugin;
     private final Player player;
     private final Mat mat;
     private final int side;
     private final Inventory inv;
-    private int selCard = -1, selMove = -1;
+    private int selCard = -1, selMove = -1, selItem = -1;
 
     BattleMenu(SneakyCardsPlugin plugin, Player player, Mat mat) {
         this.plugin = plugin;
@@ -69,7 +69,8 @@ public final class BattleMenu implements InventoryHolder {
         for (int i = 0; i < 27; i++) inv.setItem(i, blank);
         int enemy = 1 - side;
         for (int i = 0; i < 3; i++) {
-            inv.setItem(OWN + i, cardItem(mat.cards[side][i], selCard == i, "Click to choose this card"));
+            boolean healing = selItem >= 0 && selItem < mat.hand[side].size() && mat.hand[side].get(selItem).heals();
+            inv.setItem(OWN + i, cardItem(mat.cards[side][i], selCard == i, healing ? "Click to heal this card" : "Click to choose this card"));
             inv.setItem(ENEMY + i, cardItem(mat.cards[enemy][i], false, enemyHint(mat.cards[enemy][i])));
         }
         if (selCard >= 0 && mat.cards[side][selCard] != null) {
@@ -93,6 +94,25 @@ public final class BattleMenu implements InventoryHolder {
         inv.setItem(INFO, it.menu("info", "Energy: " + mat.energy[side] + "/" + plugin.rules().energyMax(), NamedTextColor.AQUA, Math.max(1, mat.energy[side]),
                 "1. Click a card that hasn't acted", "2. Click one of its moves", "3. Click an enemy card",
                 "Strength > Magicing > Dexterity > Strength", "Advantage x" + plugin.rules().advantage() + ", disadvantage x" + plugin.rules().disadvantage()));
+        for (int k = 0; k < 2; k++) {
+            if (k >= mat.hand[side].size()) { inv.setItem(ITEM + k, it.menu("blank", "No item", NamedTextColor.DARK_GRAY, 1, "Bring up to 2 item cards: right-click", "your side of the mat before the battle")); continue; }
+            ItemType t = mat.hand[side].get(k);
+            ItemStack icon = plugin.items().itemCard(t);
+            final int kk = k;
+            boolean can = !mat.itemUsedThisTurn && mat.energy[side] >= t.cost;
+            icon.editMeta(m -> {
+                m.lore(List.of(Items.t(t.rarity.label + (t.kind == ItemType.Kind.TRAP ? " Trap" : " Item") + "  (⚡" + t.cost + ")", t.rarity.color()),
+                        Items.t(t.description, NamedTextColor.WHITE),
+                        Items.t(mat.itemUsedThisTurn ? "You already used an item this turn" : !can ? "Not enough energy"
+                                : t.heals() ? (selItem == kk ? "Now click one of your cards" : "Click, then click a card to heal")
+                                : t.kind == ItemType.Kind.TRAP ? "Click to set it face down" : "Click to use", can ? NamedTextColor.AQUA : NamedTextColor.DARK_GRAY),
+                        Items.t("Using an item doesn't end your turn", NamedTextColor.DARK_GRAY)));
+                if (selItem == kk) m.setEnchantmentGlintOverride(true);
+            });
+            inv.setItem(ITEM + k, icon);
+        }
+        inv.setItem(15, it.menu("info", "Traps set: you " + mat.traps[side].size() + ", enemy " + mat.traps[1 - side].size(), NamedTextColor.LIGHT_PURPLE,
+                Math.max(1, mat.traps[1 - side].size()), "Enemy traps are hidden until they spring"));
         inv.setItem(REST, it.menu("reset", "Rest", NamedTextColor.GREEN, 1, "Skip your turn and gain +" + plugin.rules().restBonus() + " extra energy"));
         inv.setItem(FORFEIT, it.menu("close", "Forfeit", NamedTextColor.RED, 1, "Give up and let your opponent win"));
     }
@@ -114,6 +134,19 @@ public final class BattleMenu implements InventoryHolder {
         if (slot == FORFEIT) { player.closeInventory(); plugin.battles().forfeit(player); return; }
         if (slot == REST && mat.turn == side && !mat.busy) { player.closeInventory(); plugin.battles().rest(player); return; }
         if (mat.turn != side || mat.busy) { BattleManager.say(player, "Wait for your turn.", NamedTextColor.YELLOW); return; }
+        if (slot == ITEM || slot == ITEM + 1) {
+            int k = slot - ITEM;
+            if (k >= mat.hand[side].size()) return;
+            ItemType t = mat.hand[side].get(k);
+            if (t.heals()) { selItem = k; selCard = -1; selMove = -1; render(); return; }
+            plugin.battles().useItem(player, mat, k, null);
+            selItem = -1; render(); return;
+        }
+        if (slot >= OWN && slot < OWN + 3 && selItem >= 0) {
+            var pl = mat.cards[side][slot - OWN];
+            plugin.battles().useItem(player, mat, selItem, pl);
+            selItem = -1; render(); return;
+        }
         if (slot >= OWN && slot < OWN + 3) {
             var pl = mat.cards[side][slot - OWN];
             if (pl != null && !pl.ko && !pl.acted) { selCard = slot - OWN; selMove = -1; }

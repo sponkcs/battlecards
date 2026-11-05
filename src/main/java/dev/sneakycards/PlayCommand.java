@@ -31,6 +31,7 @@ public final class PlayCommand implements CommandExecutor, TabCompleter {
                         "4. Each card acts once per round: use all your cards before any can act again.",
                         "5. Types: Strength > Magicing > Dexterity > Strength. Advantage x1.5, disadvantage x0.75.",
                         "6. Luck is the crit chance (x1.5 damage). Knock out all 3 enemy cards to win.",
+                        "7. Items: bring up to 2 item cards (right-click your side before the battle). Use one per turn from the menu: heals, energy, or face-down traps.",
                         "Commands: /sneakycards turn (reopen the turn menu), /sneakycards forfeit, /binder"};
                 for (int i = 0; i < rules.length; i++) p.sendMessage(Component.text(rules[i], i == 0 ? NamedTextColor.GOLD : NamedTextColor.GRAY));
             }
