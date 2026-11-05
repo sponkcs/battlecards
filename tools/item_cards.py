@@ -65,22 +65,17 @@ def icon(key):
     return im
 
 def item_front(key, rc, mythic):
-    """80 x 112 card: rarity frame, name bar, icon window, ITEM (green) or TRAP (purple) band."""
+    """80 x 112 card: rarity frame around one big icon. Quick items have a green tint, traps a purple one."""
     kind = ITEMS[key][1]
     base = Image.new("RGBA", (40, 56)); d = ImageDraw.Draw(base)
     dark = tuple(int(x * .55) for x in rc); light = tuple(min(255, int(x * 1.25)) for x in rc)
-    d.rectangle((0, 0, 39, 55), fill=rc); d.rectangle((1, 1, 38, 54), outline=dark); d.rectangle((3, 3, 36, 52), fill=(28, 30, 36))
+    d.rectangle((0, 0, 39, 55), fill=rc); d.rectangle((1, 1, 38, 54), outline=dark)
     if mythic:
         for i in range(0, 40, 2): d.point((i, 0), fill=light); d.point((i, 55), fill=light)
         for i in range(0, 56, 2): d.point((0, i), fill=light); d.point((39, i), fill=light)
-    d.rectangle((5, 5, 34, 10), fill=dark); d.rectangle((6, 6, 23, 9), fill=light)
-    band = (60, 160, 90) if kind == "quick" else (130, 70, 180)
-    d.rectangle((5, 41, 34, 50), fill=band)
-    for x in range(7, 33, 4): d.point((x, 45), fill=tuple(min(255, c + 60) for c in band))
+    d.rectangle((3, 3, 36, 52), fill=(40, 70, 50) if kind == "quick" else (52, 36, 70))
     im = base.resize((80, 112), Image.NEAREST)
-    win = Image.new("RGBA", (60, 54), (40, 70, 50, 255) if kind == "quick" else (52, 36, 70, 255))
-    wd = ImageDraw.Draw(win)
-    for y in range(0, 54, 6): wd.line([(0, y), (59, y)], fill=(255, 255, 255, 18))
+    win = Image.new("RGBA", (60, 54), (0, 0, 0, 0))
     win.alpha_composite(icon(key).resize((60, 54), Image.NEAREST))
-    im.paste(win, (10, 24), win)
+    im.alpha_composite(win, (10, 29))
     return im
