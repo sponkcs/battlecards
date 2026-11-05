@@ -174,7 +174,7 @@ public final class Listeners implements Listener {
         boolean dropped = false;
         for (int i = 0; i < n; i++) {
             Card c = plugin.registry().draw(rng);
-            boolean holo = rng.nextDouble() < plugin.getConfig().getDouble("holo-chance", 0.05);
+            boolean holo = rng.nextDouble() < plugin.getConfig().getDouble("holo-chance", 0.0005);
             if (Items.give(p, plugin.items().card(c, holo))) dropped = true;
             if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
             if (holo) {
