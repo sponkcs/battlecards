@@ -50,7 +50,7 @@ Players: `/sneakycards turn` reopens the menu (or right-click one of your cards)
 Sneak + right-click one of your cards before the battle starts to take it back.
 
 ## Holographic cards
-Each character card from a pack has a `holo-chance` (default 0.05%, about 1 in 2000) to be holographic: a shifting rainbow foil on the card and, in battle, a mannequin that floats a little higher, sways slowly and has two colour-shifting sparkles drifting around it. Holo cards are stored separately in the binder and come back as holo after battles. `/cardadmin give <player> card <id> 1 holo` gives one.
+Each character card from a pack has a `holo-chance` (default 3%, about one holo every 11 packs) to be holographic. Pulling one plays a reveal only you see: the card rises in front of you spinning inside a rainbow ring of sparkles, bursts with a "✦ HOLOGRAPHIC ✦" title, then flies into your inventory. Holo cards have a shifting rainbow foil on the card and, in battle, a mannequin that floats a little higher, sways slowly and has two colour-shifting sparkles drifting around it. Holo cards are stored separately in the binder and come back as holo after battles. `/cardadmin give <player> card <id> 1 holo` gives one.
 
 ## Titles
 Each card can have an optional title (for example *off-duty*), shown in italics under the name. It is only for looks and has no effect on battles. Older cards saved with a `collection:` keep it as their title.

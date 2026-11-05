@@ -174,13 +174,12 @@ public final class Listeners implements Listener {
         boolean dropped = false;
         for (int i = 0; i < n; i++) {
             Card c = plugin.registry().draw(rng);
-            boolean holo = rng.nextDouble() < plugin.getConfig().getDouble("holo-chance", 0.0005);
+            boolean holo = rng.nextDouble() < plugin.getConfig().getDouble("holo-chance", 0.03);
             if (Items.give(p, plugin.items().card(c, holo))) dropped = true;
             if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
             if (holo) {
                 line.append(Items.t("✦ ", net.kyori.adventure.text.format.TextColor.color(0xB8F2FF)));
-                p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.6f);
-                p.sendActionBar(Component.text("✦ Holographic " + c.name() + "!", net.kyori.adventure.text.format.TextColor.color(0xB8F2FF)));
+                HoloReveal.play(plugin, p, c);
             }
             line.append(Items.t(c.name(), c.rarity().color()));
         }
