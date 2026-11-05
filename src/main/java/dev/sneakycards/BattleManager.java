@@ -170,7 +170,7 @@ public final class BattleManager {
         }
 
         boolean claimed = m.players[side] == null;
-        DisplayManager.Placed pl = displays().place(p, card, m.slotTop(side, col), m.sideYaw(side), true);
+        DisplayManager.Placed pl = displays().place(p, card, m.slotTop(side, col), m.sideYaw(side), true, plugin.items().isHolo(hand));
         if (pl == null) return;
         if (claimed) { m.players[side] = me; byPlayer.put(me, m); }
         pl.mat = m; pl.side = side; pl.col = col;
@@ -193,7 +193,7 @@ public final class BattleManager {
         if (m == null || m.state != Mat.State.WAITING || !pl.owner.equals(p.getUniqueId())) return;
         displays().remove(pl);
         m.cards[pl.side][pl.col] = null;
-        giveBack(pl.owner, pl.card);
+        giveBack(pl.owner, pl.card, pl.holo);
         if (m.countdown) { m.countdown = false; tell(m, Component.text("A card was picked up, so the countdown stopped.", NamedTextColor.GRAY)); }
         if (!m.hasCards(pl.side)) releaseSide(m, pl.side);
     }
@@ -307,14 +307,10 @@ public final class BattleManager {
         Bukkit.getScheduler().runTaskLater(plugin, d::remove, 40L);
     }
 
-    private void giveBack(UUID owner, Card c) {
+    private void giveBack(UUID owner, Card c, boolean holo) {
         Player p = Bukkit.getPlayer(owner);
-        if (p != null) {
-            var left = p.getInventory().addItem(plugin.items().card(c));
-            left.values().forEach(i -> p.getWorld().dropItemNaturally(p.getLocation(), i));
-        } else {
-            plugin.binders().add(owner, c.id(), 1);
-        }
+        if (p != null) Items.give(p, plugin.items().card(c, holo));
+        else plugin.binders().add(owner, c.id() + (holo ? "#holo" : ""), 1);
     }
 
     private void clearCards(Mat m) {
@@ -322,7 +318,7 @@ public final class BattleManager {
             DisplayManager.Placed pl = m.cards[s][c];
             if (pl == null) continue;
             displays().remove(pl);
-            giveBack(pl.owner, pl.card);
+            giveBack(pl.owner, pl.card, pl.holo);
             m.cards[s][c] = null;
         }
     }
@@ -606,7 +602,7 @@ public final class BattleManager {
                     DisplayManager.Placed pl = m.cards[side][c];
                     if (pl == null) continue;
                     displays().remove(pl);
-                    giveBack(pl.owner, pl.card);
+                    giveBack(pl.owner, pl.card, pl.holo);
                     m.cards[side][c] = null;
                 }
                 releaseSide(m, side);

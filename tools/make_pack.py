@@ -190,6 +190,31 @@ for ik, (irar, ikind) in ITEMS.items():
           {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/{n}", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/{n}"}})
     wjson(path("assets", NS, "items", n + ".json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/{n}"}})
 
+# holographic cards: a translucent, slowly shifting rainbow foil laid just in front of the card face (no glint)
+import colorsys
+FOIL_FRAMES, FOIL = 12, 32
+foil = Image.new("RGBA", (FOIL, FOIL * FOIL_FRAMES))
+fp = foil.load()
+for f in range(FOIL_FRAMES):
+    for y in range(FOIL):
+        for x in range(FOIL):
+            t = ((x + y) / (2 * FOIL) + f / FOIL_FRAMES) % 1.0
+            r, g, b = colorsys.hsv_to_rgb(t, 0.55, 1.0)
+            band = 0.5 + 0.5 * math.sin((x - y) * 0.45 + f * (2 * math.pi / FOIL_FRAMES))
+            fp[x, f * FOIL + y] = (int(r * 255), int(g * 255), int(b * 255), int(28 + 44 * band))
+foil.save(path("assets", NS, "textures", "item", "holo_foil.png"))
+wjson(path("assets", NS, "textures", "item", "holo_foil.png.mcmeta"), {"animation": {"frametime": 3, "interpolate": True}})
+wjson(path("assets", NS, "models", "item", "card_holo_overlay.json"), {
+    "parent": f"{NS}:item/card_base", "textures": {"foil": f"{NS}:item/holo_foil", "particle": f"{NS}:item/holo_foil"},
+    "elements": [{"from": [3, 1, 8.27], "to": [13, 15, 8.27], "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#foil"}}}]})
+for bk in BACKGROUNDS:
+    for k in RARITIES:
+        n = f"card_{bk}_{k}"
+        wjson(path("assets", NS, "items", n + "_holo.json"), {"model": {"type": "minecraft:composite", "models": [
+            {"type": "minecraft:model", "model": f"{NS}:item/{n}"},
+            {"type": "minecraft:model", "model": f"{NS}:item/card_holo_overlay"},
+            {"type": "minecraft:special", "base": f"{NS}:item/card_head", "model": {"type": "minecraft:player_head"}}]}})
+
 # face-down card shown on the mat until the battle starts (card back on both sides, no head layer)
 wjson(path("assets", NS, "models", "item", "card_facedown.json"),
       {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/card_back", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/card_back"}})

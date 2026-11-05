@@ -1,4 +1,5 @@
 cards-per-pack: 3
+holo-chance: 0.05            # chance for each character card in a pack to be holographic (0.05 = 1 in 20)
 items-per-pack: 2            # item/trap cards added to each pack
 start-countdown-ticks: 100   # once both teams are full, time to add item cards before the battle starts
 pack-cooldown-ms: 400        # minimum time between pack openings per player

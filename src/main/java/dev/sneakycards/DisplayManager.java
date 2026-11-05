@@ -31,7 +31,7 @@ public final class DisplayManager {
         ItemDisplay face; Interaction hit; Mannequin man; TextDisplay preview, hpText;
         Anim anim = Anim.NONE; int animTick = 0; long age = 0;
         // battle state
-        int hp, maxHp; boolean ko = false; boolean acted = false; boolean faceDown = false; boolean stunned = false;   // acted: already used its action this round
+        int hp, maxHp; boolean ko = false; boolean acted = false; boolean faceDown = false; boolean stunned = false; boolean holo = false;   // acted: already used its action this round
         Mat mat; int side = -1, col = -1;
         // attack animation state
         Vector dir; double reach = 1.0; Placed target; Runnable onImpact, onDone;
@@ -56,10 +56,10 @@ public final class DisplayManager {
 
     // ---- placing and removing ----
 
-    public Placed place(Player owner, Card card, Location top, float yaw) { return place(owner, card, top, yaw, false); }
+    public Placed place(Player owner, Card card, Location top, float yaw) { return place(owner, card, top, yaw, false, false); }
 
     /** faceDown: shows the card back and no mannequin until {@link #reveal} is called (used on game mats). */
-    public Placed place(Player owner, Card card, Location top, float yaw, boolean faceDown) {
+    public Placed place(Player owner, Card card, Location top, float yaw, boolean faceDown, boolean holo) {
         int max = plugin.getConfig().getInt("max-cards-per-player", 3);
         long mine = placed.stream().filter(p -> p.owner.equals(owner.getUniqueId())).count();
         if (mine >= max) {
@@ -71,7 +71,8 @@ public final class DisplayManager {
         p.maxHp = card.stat(Stat.HEALTH);
         p.hp = p.maxHp;
         p.faceDown = faceDown;
-        ItemStack item = faceDown ? plugin.items().cardBack() : plugin.items().card(card);
+        p.holo = holo;
+        ItemStack item = faceDown ? plugin.items().cardBack() : plugin.items().card(card, holo);
         double hover = hover(), scale = scale(), headTop = hover + 1.85 * scale;
 
         // the mat surface is about 0.063 above the block top, so the card sits just above it
@@ -154,7 +155,7 @@ public final class DisplayManager {
         w.playSound(p.base, Sound.ITEM_BOOK_PAGE_TURN, 1f, 0.8f);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (p.face == null || !p.face.isValid()) return;
-            p.face.setItemStack(plugin.items().card(p.card));
+            p.face.setItemStack(plugin.items().card(p.card, p.holo));
             p.face.setInterpolationDelay(0);
             p.face.setInterpolationDuration(5);
             p.face.setTransformation(flat(0f, 1f));
@@ -400,10 +401,26 @@ public final class DisplayManager {
                     if (run != null) run.run();
                 }
             } else if (p.age % 2 == 0) {
-                Location l = p.base.clone().add(0, up, 0);
-                l.setYaw(p.yaw); l.setPitch(0);
+                // holographic mannequins float a little higher and slowly turn from side to side
+                Location l = p.base.clone().add(0, up + (p.holo ? 0.05 * k : 0), 0);
+                l.setYaw(p.yaw + (p.holo ? (float) (Math.sin(p.age * 0.04) * 16) : 0f)); l.setPitch(0);
                 p.man.teleport(l);
             }
+            if (p.holo && p.man != null && p.age % 3 == 0) holoSparkles(p, k);
+        }
+    }
+
+    /** Two small sparkles that drift around a holographic mannequin, slowly shifting colour. No glow. */
+    private void holoSparkles(Placed p, double k) {
+        Location c = p.man.getLocation();
+        double h = 1.85 * scale();
+        for (int i = 0; i < 2; i++) {
+            double a = p.age * 0.07 + i * Math.PI;
+            double y = h * (0.45 + 0.35 * Math.sin(p.age * 0.05 + i * 2.1));
+            float hue = (float) ((p.age * 0.004 + i * 0.5) % 1.0);
+            java.awt.Color rgb = java.awt.Color.getHSBColor(hue, 0.45f, 1f);
+            Particle.DustOptions dust = new Particle.DustOptions(Color.fromRGB(rgb.getRed(), rgb.getGreen(), rgb.getBlue()), 0.55f);
+            c.getWorld().spawnParticle(Particle.DUST, c.clone().add(Math.cos(a) * 0.3 * k * 1.4, y, Math.sin(a) * 0.3 * k * 1.4), 1, 0, 0, 0, 0, dust);
         }
     }
 

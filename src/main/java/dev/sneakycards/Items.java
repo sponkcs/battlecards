@@ -20,7 +20,7 @@ import java.util.List;
 
 /** Builds every custom item. Models come from the resource pack (namespace "sneakycards"). */
 public final class Items {
-    final NamespacedKey cardKey, packKey, binderKey, matKey, itemKey;
+    final NamespacedKey cardKey, packKey, binderKey, matKey, itemKey, holoKey;
 
     private final SneakyCardsPlugin plugin;
 
@@ -31,6 +31,7 @@ public final class Items {
         binderKey = new NamespacedKey(plugin, "binder");
         matKey = new NamespacedKey(plugin, "mat");
         itemKey = new NamespacedKey(plugin, "item");
+        holoKey = new NamespacedKey(plugin, "holo");
     }
 
     /** The card's skin as a profile: used by the mannequin and by the head drawn on the card item. */
@@ -62,21 +63,27 @@ public final class Items {
 
     private static void model(ItemMeta m, String path) { m.setItemModel(NamespacedKey.fromString("sneakycards:" + path)); }
 
-    private final java.util.Map<Card, ItemStack> cardCache = new java.util.HashMap<>();
+    private final java.util.Map<Card, ItemStack> cardCache = new java.util.HashMap<>(), holoCache = new java.util.HashMap<>();
 
     /** Card items are cached per card (the Card record changes when edited, so edits get a fresh item). */
-    public ItemStack card(Card c) {
-        if (cardCache.size() > 512) cardCache.clear();
-        return cardCache.computeIfAbsent(c, this::buildCard).clone();
+    public ItemStack card(Card c) { return card(c, false); }
+
+    /** holo: the holographic version (rainbow foil on the card, floating sparkles around its mannequin). */
+    public ItemStack card(Card c, boolean holo) {
+        var cache = holo ? holoCache : cardCache;
+        if (cache.size() > 512) cache.clear();
+        return cache.computeIfAbsent(c, k -> buildCard(k, holo)).clone();
     }
 
-    private ItemStack buildCard(Card c) {
+    private ItemStack buildCard(Card c, boolean holo) {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta m = it.getItemMeta();
-        model(m, "card_" + c.background().key() + "_" + c.rarity().key());
-        m.displayName(t(c.name(), c.rarity().color()).decorate(TextDecoration.BOLD));
+        model(m, "card_" + c.background().key() + "_" + c.rarity().key() + (holo ? "_holo" : ""));
+        m.displayName(holo ? t("✦ ", TextColor.color(0xB8F2FF)).append(t(c.name(), c.rarity().color())).decorate(TextDecoration.BOLD)
+                : t(c.name(), c.rarity().color()).decorate(TextDecoration.BOLD));
         List<Component> lore = new ArrayList<>();
         lore.add(t(c.rarity().label, c.rarity().color()));
+        if (holo) lore.add(t("✦ Holographic", TextColor.color(0xB8F2FF)));
         if (!c.title().isBlank()) lore.add(Component.text(c.title(), NamedTextColor.GRAY).decorate(TextDecoration.ITALIC));
         lore.add(t(c.background().label, NamedTextColor.DARK_GRAY));
         lore.add(t("Type: " + Rules.type(c).label + "   Team cost: " + Rules.cost(c.rarity()), NamedTextColor.AQUA));
@@ -88,6 +95,7 @@ public final class Items {
         lore.add(t("Right-click a mat slot to play", NamedTextColor.DARK_GRAY));
         m.lore(lore);
         m.getPersistentDataContainer().set(cardKey, PersistentDataType.STRING, c.id());
+        if (holo) m.getPersistentDataContainer().set(holoKey, PersistentDataType.BYTE, (byte) 1);
         it.setItemMeta(m);
         // the resource pack draws this profile's head in the card's picture window
         it.setData(DataComponentTypes.PROFILE, profile(c));
@@ -182,6 +190,10 @@ public final class Items {
         it.setItemMeta(m);
         it.setAmount(Math.max(1, Math.min(99, amount)));
         return it;
+    }
+
+    public boolean isHolo(ItemStack it) {
+        return it != null && it.hasItemMeta() && it.getItemMeta().getPersistentDataContainer().has(holoKey, PersistentDataType.BYTE);
     }
 
     public String cardId(ItemStack it) {

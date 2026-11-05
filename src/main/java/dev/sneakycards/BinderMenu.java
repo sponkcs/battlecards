@@ -64,8 +64,9 @@ public final class BinderMenu implements InventoryHolder {
                 ItemType t = ItemType.parse(e.getKey().substring(5));
                 if (t != null) list.add(new Entry(e.getKey(), it.itemCard(t), t.rarity.ordinal(), t.label, true));
             } else {
-                Card c = plugin.registry().get(e.getKey());
-                if (c != null) list.add(new Entry(e.getKey(), it.card(c), c.rarity().ordinal(), c.name(), false));
+                boolean holo = e.getKey().endsWith("#holo");
+                Card c = plugin.registry().get(holo ? e.getKey().substring(0, e.getKey().length() - 5) : e.getKey());
+                if (c != null) list.add(new Entry(e.getKey(), it.card(c, holo), c.rarity().ordinal(), c.name() + (holo ? " ~holo" : ""), false));
             }
         }
         // characters first, then items; each by rarity (highest first) and name

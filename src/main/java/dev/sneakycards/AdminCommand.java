@@ -87,7 +87,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
     }
 
     private void give(CommandSender s, String[] a) {
-        if (a.length < 3) { say(s, "Usage: /cardadmin give <player> pack [amount] | card <id> [amount] | item <id> [amount]"); return; }
+        if (a.length < 3) { say(s, "Usage: /cardadmin give <player> pack [amount] | card <id> [amount] [holo] | item <id> [amount]"); return; }
         Player t = Bukkit.getPlayerExact(a[1]);
         if (t == null) { say(s, "Player not found."); return; }
         if (a[2].equalsIgnoreCase("pack")) {
@@ -104,7 +104,8 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         } else if (a[2].equalsIgnoreCase("card") && a.length > 3) {
             Card card = plugin.registry().get(a[3]);
             if (card == null) { say(s, "No such card."); return; }
-            var item = plugin.items().card(card);
+            boolean holo = a.length > 5 && a[5].equalsIgnoreCase("holo");
+            var item = plugin.items().card(card, holo);
             item.setAmount(a.length > 4 ? parse(a[4]) : 1);
             Items.give(t, item);
             say(s, "Gave " + card.name() + " to " + t.getName() + ".");
@@ -144,6 +145,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         if (a.length == 3 && a[0].equalsIgnoreCase("give")) return List.of("pack", "card", "item");
         if (a.length == 4 && a[0].equalsIgnoreCase("give") && a[2].equalsIgnoreCase("item")) return java.util.Arrays.stream(ItemType.values()).map(ItemType::key).toList();
         if (a.length == 3 && a[0].equalsIgnoreCase("delete")) return List.of("confirm");
+        if (a.length == 6 && a[0].equalsIgnoreCase("give") && a[2].equalsIgnoreCase("card")) return List.of("holo");
         if (a.length == 4 && a[0].equalsIgnoreCase("give") && a[2].equalsIgnoreCase("card")) return plugin.registry().all().stream().map(Card::id).toList();
         return List.of();
     }

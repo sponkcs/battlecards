@@ -76,6 +76,7 @@ public final class Listeners implements Listener {
             if (e.getClickedInventory() == top) { m.click(e.getRawSlot()); return; }
             ItemStack it = e.getCurrentItem();
             String id = plugin.items().cardId(it);
+            if (id != null && plugin.items().isHolo(it)) id = id + "#holo";
             if (id == null) { ItemType t = plugin.items().itemType(it); if (t != null) id = "item:" + t.name(); }
             if (id == null) return;
             int n = e.getClick().isShiftClick() ? it.getAmount() : 1;
@@ -136,7 +137,7 @@ public final class Listeners implements Listener {
                 else if (placed.mat.state == Mat.State.FIGHTING) battles.openTurnMenu(p);
             } else if (p.isSneaking()) {
                 plugin.displays().remove(placed);
-                Items.give(p, plugin.items().card(placed.card));
+                Items.give(p, plugin.items().card(placed.card, placed.holo));
             }
             return;
         }
@@ -173,8 +174,14 @@ public final class Listeners implements Listener {
         boolean dropped = false;
         for (int i = 0; i < n; i++) {
             Card c = plugin.registry().draw(rng);
-            if (Items.give(p, plugin.items().card(c))) dropped = true;
+            boolean holo = rng.nextDouble() < plugin.getConfig().getDouble("holo-chance", 0.05);
+            if (Items.give(p, plugin.items().card(c, holo))) dropped = true;
             if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
+            if (holo) {
+                line.append(Items.t("✦ ", net.kyori.adventure.text.format.TextColor.color(0xB8F2FF)));
+                p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.6f);
+                p.sendActionBar(Component.text("✦ Holographic " + c.name() + "!", net.kyori.adventure.text.format.TextColor.color(0xB8F2FF)));
+            }
             line.append(Items.t(c.name(), c.rarity().color()));
         }
         int items = plugin.getConfig().getInt("items-per-pack", 2);
