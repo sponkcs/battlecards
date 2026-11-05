@@ -260,14 +260,13 @@ for mk, (mlabel, fn) in MATS.items():
     wjson(path("assets", NS, "models", "item", f"mat_{mk}.json"), {"parent": f"{NS}:item/mat_base", "textures": {"0": f"{NS}:item/mat_{mk}", "particle": f"{NS}:item/mat_{mk}"}})
     wjson(path("assets", NS, "items", f"mat_{mk}.json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/mat_{mk}"}})
 
-# ---------- booster pack ----------
-im = Image.new("RGBA", (16,16), (0,0,0,0)); d = ImageDraw.Draw(im)
-d.rectangle((3,1,12,14), fill=(214,60,90), outline=(100,20,40))
-for x in range(3, 13): d.point((x,1), fill=(255,200,210) if x % 2 else (160,40,60)); d.point((x,14), fill=(255,200,210) if x % 2 else (160,40,60))
-d.polygon([(8,4),(9,7),(12,8),(9,9),(8,12),(7,9),(4,8),(7,7)], fill=(255,214,60))
-im.save(path("assets", NS, "textures", "item", "pack.png")); sheet["pack"] = im
-wjson(path("assets", NS, "models", "item", "pack.json"), {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/pack"}})
-wjson(path("assets", NS, "items", "pack.json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/pack"}})
+# ---------- booster packs: the standard pack ("pack") plus the other varieties ("pack_<key>") ----------
+from packs import packs as _packs, sprite as _sprite
+for pk, art in _packs().items():
+    name = "pack" if pk == "standard" else "pack_" + pk
+    sp = _sprite(art); sp.save(path("assets", NS, "textures", "item", name + ".png")); sheet[name] = sp
+    wjson(path("assets", NS, "models", "item", name + ".json"), {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{name}"}})
+    wjson(path("assets", NS, "items", name + ".json"), {"model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"}})
 
 # ---------- 3D binder (colours match the binder menu in tools/gui.py) ----------
 # 64 x 64 atlas, 4 px per model unit. No two faces share a plane, so nothing z-fights (flickers).

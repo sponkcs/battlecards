@@ -19,6 +19,10 @@ In `/cardadmin` click the Background slot (top row, fourth slot). Art lives in `
 Cards saved with the old names (sakura, arcane) load as Blossom Orchard and Wizard Spire.
 
 ## Packs and the binder
+Pack varieties (`/cardadmin give <player> pack [amount] [type]`): Card Pack (3 characters + 2 items), Premium Pack
+(one character Rare or better, triple holo chance), Prism Pack (one guaranteed holo), 8 themed packs such as
+`theme_hellfire` (2 of the 3 characters from that background), Supply Crate (4 quick items + 1 trap) and
+Trap Kit (4 traps + 1 quick item).
 Right-click a pack to open it. The cards go into your inventory (extras drop at your feet).
 Right-click a binder to open it, then click a card in your inventory to store it (shift-click stores the whole stack).
 The binder's Deck builder button builds your battle deck from what's stored there.
@@ -29,8 +33,8 @@ Three looks: Classic Felt, Royal Purple, Neon Gradient (cyan to pink). Art lives
     /cardadmin mat <classic|purple|neon> [player]    give a mat item
     /cardadmin mat remove                            remove the nearest mat
 Right-click the top of a block with the mat item to place it (it covers 3 x 3 blocks). The player who places it
-stands at the near end. Each side has three character slots on the owner's left and a deck slot on their right;
-the middle strip holds each side's discard pile (in front of its deck) and up to two face-down traps.
+stands at the near end. Each side has three card slots in a row; the deck pile sits off to the owner's right, nudged towards them,
+and the discard pile mirrors it on the left. Face-down traps lie in the open middle.
 Sneak + right-click the middle of an empty mat to pick it up. Mats are not saved across restarts.
 ## Decks
 Open your binder and click **Deck builder**. A deck is 15 cards from your binder: at least 6 characters, at most

@@ -8,15 +8,15 @@ import java.util.*;
 
 /**
  * One placed game mat: 3 x 3 blocks. Side 0 is the near end (where the placer stood), side 1 the far end.
- * Each side has three character slots on its owner's left and a deck slot on their right; the centre strip
- * holds each side's discard pile (in front of its deck) and up to two face-down traps. Numbers match tools/mats.py.
+ * Each side has three character slots in a row. The deck pile sits off to the owner's right, nudged towards them,
+ * and the discard pile mirrors it on the left. Face-down traps lie in the open middle. Numbers match tools/mats.py.
  */
 final class Mat {
-    static final double ROW_Z = 0.74;                       // distance of each card row from the centre
-    static final double[] COL_X = {-1.08, -0.36, 0.36};     // character slots, from the owner's left
-    static final double DECK_X = 1.08;                      // deck slot, on the owner's right
-    static final double STRIP_Z = 0.16;                     // discard pile and traps, towards the owner
-    static final double[] TRAP_X = {-0.95, -0.5};
+    static final double ROW_Z = 0.7;                        // distance of each card row from the centre
+    static final double[] COL_X = {-0.62, 0.0, 0.62};       // character slots, from the owner's left
+    static final double PILE_X = 1.12, PILE_Z = 0.9;        // deck pile on the owner's right, discard on their left
+    static final double STRIP_Z = 0.15;                     // traps, in the middle towards the owner
+    static final double[] TRAP_X = {-0.55, 0.55};
     static final UUID AI = new UUID(0L, 0x5ca4dL);          // the computer opponent in a solo battle
 
     enum State { WAITING, SETUP, FIGHTING, ENDED }
@@ -66,8 +66,8 @@ final class Mat {
     }
 
     Location slotTop(int side, int col) { return spot(side, COL_X[col], ROW_Z); }
-    Location deckTop(int side) { return spot(side, DECK_X, ROW_Z); }
-    Location discardTop(int side) { return spot(side, DECK_X, STRIP_Z); }
+    Location deckTop(int side) { return spot(side, PILE_X, PILE_Z); }
+    Location discardTop(int side) { return spot(side, -PILE_X, PILE_Z); }
     Location trapSpot(int side, int index) { return spot(side, TRAP_X[index], STRIP_Z); }
 
     /** Cards face the opposing side. */

@@ -1,5 +1,5 @@
-"""Game mat textures. A mat is 3 x 3 blocks. Each side has three card slots and a deck slot (on that player's
-right); the centre strip holds each side's discard pile (in front of its deck) and up to two face-down traps.
+"""Game mat textures. A mat is 3 x 3 blocks. Each side has three card slots in a row; the deck pile sits off to the
+owner's right, nudged towards them, and the discard pile mirrors it on the left. Traps lie in the open middle.
 Texture is 288 x 288 (96 px per block); the same layout numbers are used by the plugin (Mat.java)."""
 from PIL import Image, ImageDraw, ImageFilter
 import math, random
@@ -7,12 +7,11 @@ import math, random
 PPB = 96                       # pixels per block
 MW, MH = 3, 3                  # mat size in blocks
 TW, TH = MW * PPB, MH * PPB
-SLOT_W, SLOT_H = 0.62, 0.86     # slot size in blocks
-ROW_Z = 0.74                   # distance of each card row from the centre, in blocks
-COLS = (-1.08, -0.36, 0.36)   # character slots, from the owner's left
-DECK_X = 1.08                # deck slot, on the owner's right
-DISC = (1.08, 0.16, 0.56, 0.36)   # discard zone: x, z from centre (towards the owner), width, depth
-TRAPS = ((-0.95, 0.16), (-0.5, 0.16))  # trap zones (x, z towards the owner), 0.36 x 0.26
+SLOT_W, SLOT_H = 0.54, 0.76     # slot size in blocks
+ROW_Z = 0.7                   # distance of each card row from the centre, in blocks
+COLS = (-0.62, 0.0, 0.62)    # character slots, from the owner's left
+PILE_X, PILE_Z = 1.12, 0.9   # deck pile (owner's right) and discard pile (owner's left), nudged towards the owner
+PILE_W, PILE_H = 0.42, 0.58
 
 def px(bx, bz):                # block offsets from the mat centre -> pixel position
     return TW / 2 + bx * PPB, TH / 2 + bz * PPB
@@ -29,14 +28,9 @@ def slot_boxes():
             out.append(box(cx * side, side * ROW_Z, SLOT_W, SLOT_H))
     return out
 
-def deck_boxes():
-    return [box(DECK_X * side, side * ROW_Z, SLOT_W, SLOT_H) for side in (-1, 1)]
-
-def discard_boxes():
-    return [box(DISC[0] * side, side * DISC[1], DISC[2], DISC[3]) for side in (-1, 1)]
-
-def trap_boxes():
-    return [box(tx * side, side * tz, 0.36, 0.26) for side in (-1, 1) for (tx, tz) in TRAPS]
+def pile_boxes():
+    """Deck and discard spots for both sides."""
+    return [box(x * side, side * PILE_Z, PILE_W, PILE_H) for side in (-1, 1) for x in (PILE_X, -PILE_X)]
 
 def lerp(a, b, t): return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(len(a)))
 
@@ -58,7 +52,7 @@ def star(d, cx, cy, r, fill):
     d.polygon([(cx, cy - r), (cx + r * .28, cy - r * .28), (cx + r, cy), (cx + r * .28, cy + r * .28),
                (cx, cy + r), (cx - r * .28, cy + r * .28), (cx - r, cy), (cx - r * .28, cy - r * .28)], fill=fill)
 
-def dashed_rect(d, b, color, width=2, dash=6):
+def _unused_dashed_rect(d, b, color, width=2, dash=6):
     x0, y0, x1, y1 = [int(v) for v in b]
     for x in range(x0, x1, dash * 2):
         d.line([(x, y0), (min(x + dash, x1), y0)], fill=color, width=width); d.line([(x, y1), (min(x + dash, x1), y1)], fill=color, width=width)
@@ -69,24 +63,9 @@ def common_layout(im, line, slot_fill, corner, emblem):
     d = ImageDraw.Draw(im, "RGBA")
     for b in slot_boxes():
         d.rounded_rectangle(b, radius=7, fill=slot_fill, outline=line, width=3)
-        x0, y0, x1, y1 = b
-        for k in range(4):                                  # little corner ticks
-            sx, sy = (x0 if k % 2 == 0 else x1), (y0 if k < 2 else y1)
-            d.ellipse((sx - 3, sy - 3, sx + 3, sy + 3), fill=corner)
-    for b in deck_boxes():                                  # deck slot: a stack of three card outlines
-        d.rounded_rectangle(b, radius=7, fill=slot_fill, outline=line, width=2)
-        x0, y0, x1, y1 = b; w, h = x1 - x0, y1 - y0
-        for k in range(3):
-            o = 4 + k * 4
-            d.rounded_rectangle((x0 + w * .22 + o, y0 + h * .2 - o * .3, x1 - w * .3 + o, y1 - h * .25 - o * .3), radius=3, outline=line, width=1)
-    for b in discard_boxes():
-        dashed_rect(d, b, line)
-        x0, y0, x1, y1 = b; mx, my = (x0 + x1) / 2, (y0 + y1) / 2
-        d.line([(mx - 6, my - 6), (mx + 6, my + 6)], fill=line, width=2); d.line([(mx - 6, my + 6), (mx + 6, my - 6)], fill=line, width=2)
-    for b in trap_boxes():
-        dashed_rect(d, b, line, 1, 4)
-        x0, y0, x1, y1 = b; mx, my = (x0 + x1) / 2, (y0 + y1) / 2
-        d.polygon([(mx, my - 5), (mx + 5, my + 4), (mx - 5, my + 4)], outline=line)
+    faint = line[:3] + (110,) if len(line) == 4 else line + (110,)
+    for b in pile_boxes():
+        d.rounded_rectangle(b, radius=5, outline=faint, width=2)
     cx, cz = px(0, 0)
     emblem(d, cx, cz)
 

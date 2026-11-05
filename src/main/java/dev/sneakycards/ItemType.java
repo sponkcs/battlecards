@@ -59,6 +59,15 @@ public enum ItemType {
         try { return valueOf(s.toUpperCase(Locale.ROOT)); } catch (IllegalArgumentException e) { return null; }
     }
 
+    /** An item of one kind (QUICK or TRAP), weighted by rarity. */
+    public static ItemType draw(java.util.Random r, Kind kind) {
+        double total = 0;
+        for (ItemType t : values()) if (t.kind == kind) total += t.rarity.weight;
+        double roll = r.nextDouble() * total;
+        for (ItemType t : values()) { if (t.kind != kind) continue; roll -= t.rarity.weight; if (roll < 0) return t; }
+        return kind == Kind.TRAP ? SPIKE_TRAP : BANDAGE;
+    }
+
     public static ItemType draw(java.util.Random r) {
         double total = 0;
         for (ItemType t : values()) total += t.rarity.weight;

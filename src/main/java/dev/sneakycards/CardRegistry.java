@@ -137,6 +137,27 @@ public final class CardRegistry {
 
     public boolean hasPool() { return !pool().isEmpty(); }
 
+    /**
+     * A card drawn with custom rarity weights (index = rarity), optionally only from one background.
+     * Falls back to the whole pack pool if nothing matches.
+     */
+    public Card draw(Random r, double[] weights, Background only) {
+        Map<Rarity, List<Card>> by = new EnumMap<>(Rarity.class);
+        pool().forEach((k, v) -> {
+            List<Card> l = only == null ? v : v.stream().filter(c -> c.background() == only).toList();
+            if (!l.isEmpty() && weights[k.ordinal()] > 0) by.put(k, l);
+        });
+        if (by.isEmpty()) return only != null ? draw(r, weights, null) : draw(r);
+        double total = by.keySet().stream().mapToDouble(x -> weights[x.ordinal()]).sum(), roll = r.nextDouble() * total;
+        Rarity pick = null;
+        for (Rarity x : by.keySet()) { pick = x; roll -= weights[x.ordinal()]; if (roll < 0) break; }
+        List<Card> list = by.get(pick);
+        return list.get(r.nextInt(list.size()));
+    }
+
+    /** The normal rarity weights. */
+    public static double[] baseWeights() { double[] w = new double[Rarity.values().length]; for (Rarity x : Rarity.values()) w[x.ordinal()] = x.weight; return w; }
+
     /** A card of at least the given rarity (falls back to any card if none qualify). */
     public Card draw(Random r, Rarity min) {
         Map<Rarity, List<Card>> by = new EnumMap<>(Rarity.class);

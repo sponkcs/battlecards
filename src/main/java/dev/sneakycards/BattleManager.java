@@ -102,8 +102,9 @@ public final class BattleManager {
         for (int side = 0; side < 2; side++) {
             for (int col = 0; col < 4; col++) {
                 Location at = col < 3 ? m.slotTop(side, col) : m.deckTop(side);
+                final float width = col < 3 ? 0.54f : 0.42f;
                 Interaction hit = w.spawn(at, Interaction.class, i -> {
-                    i.setInteractionWidth(0.6f);
+                    i.setInteractionWidth(width);
                     i.setInteractionHeight(0.12f);
                     i.setResponsive(true);
                     i.setPersistent(false);
@@ -239,9 +240,9 @@ public final class BattleManager {
     private void refreshDeck(Mat m, int side) {
         int n = m.deck[side].size();
         if (!m.deckPlaced[side] || n == 0) { if (m.deckDisplay[side] != null) { m.deckDisplay[side].remove(); m.deckDisplay[side] = null; } return; }
-        float f = Math.max(0.12f, n / 15f);
-        Transformation t = new Transformation(new Vector3f(0, 0.115f * f * 0.92f, 0), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0),
-                new Vector3f(0.92f, 0.92f, 0.92f * f), new AxisAngle4f());
+        float f = Math.max(0.12f, n / 15f), s = 0.66f;
+        Transformation t = new Transformation(new Vector3f(0, 0.125f * f * s, 0), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0),
+                new Vector3f(s, s, s * f), new AxisAngle4f());
         if (m.deckDisplay[side] == null || !m.deckDisplay[side].isValid()) {
             m.deckDisplay[side] = m.center.getWorld().spawn(m.deckTop(side).add(0, 0.065, 0), ItemDisplay.class, d -> {
                 d.setItemStack(plugin.items().deckStack());
@@ -262,8 +263,8 @@ public final class BattleManager {
         if (m.discardDisplay[side] == null || !m.discardDisplay[side].isValid()) {
             m.discardDisplay[side] = m.center.getWorld().spawn(m.discardTop(side).add(0, 0.07, 0), ItemDisplay.class, e -> {
                 e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
-                e.setRotation(m.sideYaw(side) + 90f, 0);   // lies sideways in the strip
-                e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0), new Vector3f(0.45f, 0.45f, 0.45f), new AxisAngle4f()));
+                e.setRotation(m.sideYaw(side), 0);
+                e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0), new Vector3f(0.66f, 0.66f, 0.66f), new AxisAngle4f()));
                 e.setPersistent(false);
             });
         }

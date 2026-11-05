@@ -5,7 +5,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.bukkit.GameMode;
@@ -163,11 +165,11 @@ public final class Listeners implements Listener {
         lastPack.put(p.getUniqueId(), now);
 
         int n = plugin.getConfig().getInt("cards-per-pack", 3);
-        if (!plugin.registry().hasPool()) {
+        if (!plugin.registry().hasPool() && plugin.items().packType(pack) != PackType.SUPPLY_CRATE && plugin.items().packType(pack) != PackType.TRAP_KIT) {
             p.sendMessage(Component.text("There are no cards in the pack pool yet.", NamedTextColor.RED));
             return;
         }
-        // a god pack: every character card is a holographic Rare or better. Summoned with /cardadmin godpack,
+        // a god pack: every character card is holographic, with much better odds for high rarities. Summoned with /cardadmin godpack,
         // or (if god-pack-chance > 0) any normal pack can secretly be one.
         boolean god = plugin.items().isGodPack(pack) || rng.nextDouble() < plugin.getConfig().getDouble("god-pack-chance", 0.0);
         pack.setAmount(pack.getAmount() - 1);
@@ -180,11 +182,44 @@ public final class Listeners implements Listener {
             p.playSound(p.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 0.4f, 1.6f);
             p.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, p.getLocation().add(0, 1.2, 0), 60, 0.4, 0.6, 0.4, 0.4);
         }
-        var line = Component.text().append(Component.text(god ? "GOD PACK: " : "Pack: ", god ? net.kyori.adventure.text.format.TextColor.color(0xFFE38A) : NamedTextColor.GOLD));
+        PackType type = plugin.items().packType(pack);
+        var line = Component.text().append(Component.text(god ? "GOD PACK: " : type.label() + ": ", god ? net.kyori.adventure.text.format.TextColor.color(0xFFE38A) : NamedTextColor.GOLD));
         boolean dropped = false;
-        for (int i = 0; i < n; i++) {
-            Card c = god ? plugin.registry().draw(rng, Rarity.RARE) : plugin.registry().draw(rng);
-            boolean holo = god || rng.nextDouble() < plugin.getConfig().getDouble("holo-chance", 0.03);
+        double holoChance = plugin.getConfig().getDouble("holo-chance", 0.03);
+        double[] base = CardRegistry.baseWeights();
+        // what's in the pack: character slots (rarity weights, background, forced holo, holo chance) and item slots
+        List<double[]> slotWeights = new ArrayList<>();
+        List<Background> slotTheme = new ArrayList<>();
+        List<Boolean> slotHolo = new ArrayList<>();
+        List<Double> slotChance = new ArrayList<>();
+        List<ItemType.Kind> itemKinds = new ArrayList<>();
+        int items = plugin.getConfig().getInt("items-per-pack", 2);
+        if (god) {
+            // god packs: all holo, and much better odds for high rarities (default Rare 35, Epic 30, Legendary 22, Mythic 13)
+            List<Double> gw = plugin.getConfig().getDoubleList("god-pack-weights");
+            double[] w = gw.size() == 6 ? gw.stream().mapToDouble(Double::doubleValue).toArray() : new double[]{0, 0, 35, 30, 22, 13};
+            for (int i = 0; i < n; i++) { slotWeights.add(w); slotTheme.add(null); slotHolo.add(true); slotChance.add(1.0); }
+            for (int i = 0; i < items; i++) itemKinds.add(null);
+        } else switch (type) {
+            case PREMIUM -> {
+                double[] rarePlus = base.clone(); rarePlus[0] = 0; rarePlus[1] = 0;
+                for (int i = 0; i < 3; i++) { slotWeights.add(i == 2 ? rarePlus : base); slotTheme.add(null); slotHolo.add(false); slotChance.add(holoChance * 3); }
+                for (int i = 0; i < items; i++) itemKinds.add(null);
+            }
+            case PRISM -> {
+                for (int i = 0; i < 3; i++) { slotWeights.add(base); slotTheme.add(null); slotHolo.add(i == 0); slotChance.add(holoChance); }
+                for (int i = 0; i < items; i++) itemKinds.add(null);
+            }
+            case SUPPLY_CRATE -> { for (int i = 0; i < 4; i++) itemKinds.add(ItemType.Kind.QUICK); itemKinds.add(ItemType.Kind.TRAP); }
+            case TRAP_KIT -> { for (int i = 0; i < 4; i++) itemKinds.add(ItemType.Kind.TRAP); itemKinds.add(ItemType.Kind.QUICK); }
+            default -> {
+                for (int i = 0; i < n; i++) { slotWeights.add(base); slotTheme.add(type.theme != null && i < 2 ? type.theme : null); slotHolo.add(false); slotChance.add(holoChance); }
+                for (int i = 0; i < items; i++) itemKinds.add(null);
+            }
+        }
+        for (int i = 0; i < slotWeights.size(); i++) {
+            Card c = plugin.registry().draw(rng, slotWeights.get(i), slotTheme.get(i));
+            boolean holo = slotHolo.get(i) || rng.nextDouble() < slotChance.get(i);
             if (Items.give(p, plugin.items().card(c, holo))) dropped = true;
             if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
             if (holo) {
@@ -193,10 +228,9 @@ public final class Listeners implements Listener {
             }
             line.append(Items.t(c.name(), c.rarity().color()));
         }
-        int items = plugin.getConfig().getInt("items-per-pack", 2);
-        if (items > 0) line.append(Component.text("  +  ", NamedTextColor.DARK_GRAY));
-        for (int i = 0; i < items; i++) {
-            ItemType t = ItemType.draw(rng);
+        if (!slotWeights.isEmpty() && !itemKinds.isEmpty()) line.append(Component.text("  +  ", NamedTextColor.DARK_GRAY));
+        for (int i = 0; i < itemKinds.size(); i++) {
+            ItemType t = itemKinds.get(i) == null ? ItemType.draw(rng) : ItemType.draw(rng, itemKinds.get(i));
             if (Items.give(p, plugin.items().itemCard(t))) dropped = true;
             if (i > 0) line.append(Component.text(", ", NamedTextColor.DARK_GRAY));
             line.append(Items.t(t.label, t.rarity.color()));

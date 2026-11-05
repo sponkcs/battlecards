@@ -90,7 +90,7 @@ public final class DisplayManager {
             d.setPersistent(false);
         });
         p.hit = w.spawn(top.clone(), Interaction.class, i -> {
-            i.setInteractionWidth(0.6f);
+            i.setInteractionWidth(0.54f);
             i.setInteractionHeight((float) (headTop + 0.1));
             i.setResponsive(true);
             i.setPersistent(false);
@@ -122,7 +122,7 @@ public final class DisplayManager {
         // ItemDisplay turns its item 180 degrees around Y, so +90 about X puts the card's front face up
         // with its top pointing away from the owner (readable from their seat).
         return new Transformation(new Vector3f(0, lift, 0), new AxisAngle4f((float) Math.toRadians(90), 1, 0, 0),
-                new Vector3f(0.92f * width, 0.92f, 0.92f), new AxisAngle4f());
+                new Vector3f(0.84f * width, 0.84f, 0.84f), new AxisAngle4f());
     }
 
     private void spawnMannequin(Placed p) {

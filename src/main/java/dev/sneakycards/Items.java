@@ -20,7 +20,7 @@ import java.util.List;
 
 /** Builds every custom item. Models come from the resource pack (namespace "sneakycards"). */
 public final class Items {
-    final NamespacedKey cardKey, packKey, binderKey, matKey, itemKey, holoKey, godKey;
+    final NamespacedKey cardKey, packKey, binderKey, matKey, itemKey, holoKey, godKey, packTypeKey;
 
     private final SneakyCardsPlugin plugin;
 
@@ -28,6 +28,7 @@ public final class Items {
         this.plugin = plugin;
         cardKey = new NamespacedKey(plugin, "card");
         packKey = new NamespacedKey(plugin, "pack");
+        packTypeKey = new NamespacedKey(plugin, "pack_type");
         binderKey = new NamespacedKey(plugin, "binder");
         matKey = new NamespacedKey(plugin, "mat");
         itemKey = new NamespacedKey(plugin, "item");
@@ -156,17 +157,29 @@ public final class Items {
         return it;
     }
 
+    public PackType packType(ItemStack it) {
+        if (it == null || !it.hasItemMeta()) return PackType.STANDARD;
+        PackType t = PackType.parse(it.getItemMeta().getPersistentDataContainer().get(packTypeKey, PersistentDataType.STRING));
+        return t == null ? PackType.STANDARD : t;
+    }
+
     public boolean isGodPack(ItemStack it) {
         return it != null && it.hasItemMeta() && it.getItemMeta().getPersistentDataContainer().has(godKey, PersistentDataType.BYTE);
     }
 
-    public ItemStack pack(int amount) {
+    public ItemStack pack(int amount) { return pack(PackType.STANDARD, amount); }
+
+    public ItemStack pack(PackType type, int amount) {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta m = it.getItemMeta();
-        model(m, "pack");
-        m.displayName(t("Card Pack", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
-        m.lore(List.of(t("Right-click to open", NamedTextColor.GRAY)));
+        model(m, type.model);
+        m.displayName(t(type.label(), NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+        List<Component> lore = new ArrayList<>();
+        for (String c : type.contents()) lore.add(t("• " + c, NamedTextColor.GRAY));
+        lore.add(t("Right-click to open", NamedTextColor.DARK_GRAY));
+        m.lore(lore);
         m.getPersistentDataContainer().set(packKey, PersistentDataType.BYTE, (byte) 1);
+        if (type != PackType.STANDARD) m.getPersistentDataContainer().set(packTypeKey, PersistentDataType.STRING, type.name());
         it.setItemMeta(m);
         it.setAmount(amount);
         return it;
