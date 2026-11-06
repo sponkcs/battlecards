@@ -27,7 +27,7 @@ import java.util.*;
  *     there. When both decks are down (or you start a solo battle) both decks are shuffled.
  *  2. Each player draws 5 (always at least 2 characters) and puts up to 3 characters face down. They flip over.
  *     Higher total Dexterity goes first; the other side starts with +1 energy.
- *  3. Each turn: draw 1 (an empty deck gives your opponent a point instead), gain 2 energy, then play up to
+ *  3. Each turn: draw 1 (nothing if your deck is empty), gain 2 energy, then play up to
  *     1 character and 1 item or trap, and attack once (attacking ends your turn). Each card acts once per round.
  *  4. A knocked-out card goes to its owner's discard pile and scores 1 point. First to 3 points wins; a player
  *     with no characters left anywhere loses. Cards never leave anyone's binder.
@@ -409,12 +409,8 @@ public final class BattleManager {
         m.busy = false;
         final int side = m.turn;
         m.playedChar[side] = false; m.itemUsed[side] = false; m.whet[side] = 0; m.warDrum[side] = false;
-        if (m.deck[side].isEmpty()) {
-            m.points[1 - side]++;
-            tell(m, Component.text(nameOf(m.players[side]) + "'s deck is empty, so " + nameOf(m.players[1 - side]) + " scores a point ("
-                    + m.points[1 - side] + "/" + pointsToWin() + ").", NamedTextColor.RED));
-            if (checkWin(m)) return;
-        }
+        if (m.deck[side].isEmpty())
+            tell(m, Component.text(nameOf(m.players[side]) + "'s deck is empty, so no card is drawn this turn.", NamedTextColor.GRAY));
         List<HandCard> drew = draw(m, side, 1, true);
         m.energy[side] = Math.min(rules().energyMax(), m.energy[side] + rules().energyPerTurn());
         boolean anyReady = false;

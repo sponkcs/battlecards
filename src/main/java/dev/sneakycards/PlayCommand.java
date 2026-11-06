@@ -34,7 +34,7 @@ public final class PlayCommand implements CommandExecutor, TabCompleter {
                         "4. Each turn: draw 1, +2 energy (max 6). Play 1 character and 1 item or trap, then attack once (ends your turn).",
                         "5. Moves cost 1-3 energy; Luck moves refund 1. Each card acts once per round.",
                         "6. Types: Strength > Magicing > Dexterity > Strength (x1.5 / x0.75). Luck is the crit chance (x1.5).",
-                        "7. Each knockout scores 1 point. First to 3 wins. Hand limit 7; an empty deck gives your rival a point each turn.",
+                        "7. Each knockout scores 1 point. First to 3 wins. Hand limit 7; with an empty deck you just skip the draw.",
                         "Commands: /sc solo, /sc turn (open the battle menu), /sc end (end turn), /sc deck, /sc forfeit, /binder"};
                 for (int i = 0; i < rules.length; i++) p.sendMessage(Component.text(rules[i], i == 0 ? NamedTextColor.GOLD : NamedTextColor.GRAY));
             }
