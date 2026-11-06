@@ -38,6 +38,17 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 plugin.registry().all().forEach(card -> s.sendMessage(Component.text(" • " + card.id() + " (" + card.rarity().label + ", " + (card.title().isBlank() ? "no title" : card.title()) + ")", NamedTextColor.GRAY)));
             }
             case "mat" -> mat(s, a);
+            case "facetest" -> {    // one card per face orientation mode, to find the one that looks right
+                if (!(s instanceof Player p)) { say(s, "Players only."); return true; }
+                Card card = a.length > 1 ? plugin.registry().get(a[1]) : plugin.registry().all().stream().findFirst().orElse(null);
+                if (card == null) { say(s, "No such card."); return true; }
+                for (String mode : List.of("a", "b", "c", "d")) {
+                    var it = plugin.items().cardWithFaceMode(card, mode);
+                    it.editMeta(m -> m.displayName(Items.t("Face test " + mode.toUpperCase(), NamedTextColor.AQUA)));
+                    Items.give(p, it);
+                }
+                say(s, "Gave 4 test cards (A-D). Check each in your hand, dropped on the ground and on a mat, then set card-face-mode in config.yml to the one that looks right and run /cardadmin reload.");
+            }
             case "testdeck" -> {    // puts the Brick Wall deck into a binder and makes it that player's deck
                 Player t = a.length > 1 ? Bukkit.getPlayerExact(a[1]) : (s instanceof Player p ? p : null);
                 if (t == null) { say(s, "Player not found."); return true; }

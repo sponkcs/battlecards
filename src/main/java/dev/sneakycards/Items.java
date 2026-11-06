@@ -71,15 +71,32 @@ public final class Items {
     public ItemStack card(Card c) { return card(c, false); }
 
     /** holo: the holographic version (rainbow foil on the card, floating sparkles around its mannequin). */
+    private String cachedMode = null;
+
+    /** Which head orientation the resource pack uses for card faces (a = automatic; b/c/d are fallbacks). */
+    private String faceMode() { return plugin.getConfig().getString("card-face-mode", "a").toLowerCase(java.util.Locale.ROOT); }
+
     public ItemStack card(Card c, boolean holo) {
+        String mode = faceMode();
+        if (!mode.equals(cachedMode)) { cardCache.clear(); holoCache.clear(); cachedMode = mode; }
         var cache = holo ? holoCache : cardCache;
         if (cache.size() > 512) cache.clear();
         return cache.computeIfAbsent(c, k -> buildCard(k, holo)).clone();
     }
 
-    private ItemStack buildCard(Card c, boolean holo) {
+    private ItemStack buildCard(Card c, boolean holo) { return buildCard(c, holo, faceMode()); }
+
+    /** A card whose face uses a specific head orientation mode (used by /cardadmin facetest). */
+    public ItemStack cardWithFaceMode(Card c, String mode) { return buildCard(c, false, mode); }
+
+    private ItemStack buildCard(Card c, boolean holo, String mode) {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta m = it.getItemMeta();
+        if (!"a".equals(mode)) {
+            var cmd = m.getCustomModelDataComponent();
+            cmd.setStrings(List.of(mode));
+            m.setCustomModelDataComponent(cmd);
+        }
         model(m, "card_" + c.background().key() + "_" + c.rarity().key() + (holo ? "_holo" : ""));
         m.displayName(holo ? t("✦ ", TextColor.color(0xB8F2FF)).append(t(c.name(), c.rarity().color())).decorate(TextDecoration.BOLD)
                 : t(c.name(), c.rarity().color()).decorate(TextDecoration.BOLD));

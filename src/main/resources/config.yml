@@ -1,4 +1,5 @@
 cards-per-pack: 3
+card-face-mode: a             # how the character face sits on cards: a (automatic), or b/c/d if faces look wrong (try /cardadmin facetest)
 holo-chance: 0.03            # chance for each character card in a pack to be holographic (0.03 = 3%: about 1 holo every 11 packs)
 god-pack-weights: [0, 0, 35, 30, 22, 13]   # god pack rarity odds: Common, Uncommon, Rare, Epic, Legendary, Mythic
 god-pack-chance: 0.0         # chance that any pack secretly opens as a god pack (all holo, Rare or better); 0 = only summoned ones

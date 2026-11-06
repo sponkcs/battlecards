@@ -154,22 +154,40 @@ CARD_DISPLAY = {
     "fixed": ([0,0,0], [0,0,0], 1.0),
     "ground": ([0,0,0], [0,0,0], 0.5),
 }
-# Measured in game: the player_head special model draws the head centred on x = z = 0 with y from -8 to 0
-# (model units), facing north. Turning it 180 degrees about Y makes it face out (upright); then it is moved
-# to the picture window centre (8, 8.6) and squashed flat just in front of the card face (z 8.25).
+# The character's head is the player_head special model, which draws the head centred on x = z = 0 with
+# y from -8 to 0 (model units). Which way it faces has been hard to pin down from screenshots, so the pack has
+# four head orientation modes; the plugin picks one per card item (config card-face-mode a/b/c/d,
+# /cardadmin facetest gives one card of each). Each is moved to the picture window centre (8, 8.6) and squashed flat
+# just in front of the card face (z 8.25).
 HEAD_P0, HEAD_S, HEAD_TARGET = (0.0, -4.0, 0.0), (0.625, 0.625, 0.01), (8.0, 8.6, 8.32)
 def rot_y(v, deg):
     r = math.radians(deg); x, y, z = v
     return (x*math.cos(r) + z*math.sin(r), y, -x*math.sin(r) + z*math.cos(r))
-_local = rot_y(tuple(HEAD_S[i] * (HEAD_P0[i] - 8) for i in range(3)), 180)
-HEAD_T = tuple(HEAD_TARGET[i] - 8 - _local[i] for i in range(3))
-head_display = {}
-for ctx, (rot, tr, c) in CARD_DISPLAY.items():
-    off = rot_y(HEAD_T, rot[1])
-    head_display[ctx] = {"rotation": [rot[0], rot[1] + 180, rot[2]], "translation": [round(tr[i] + c*off[i], 4) for i in range(3)],
-                         "scale": [round(c*HEAD_S[i], 4) for i in range(3)]}
-wjson(path("assets", NS, "models", "item", "card_head.json"), {
-    "textures": {"particle": f"{NS}:item/card_back"}, "gui_light": "front", "display": head_display})
+TURNS = {  # head turn: (applied to the head, euler XYZ for a card turned theta about Y)
+    "y": (lambda v: (-v[0], v[1], -v[2]), lambda th: [0, th + 180, 0]),     # 180 about Y
+    "x": (lambda v: (v[0], -v[1], -v[2]), lambda th: [180, -th, 0]),        # 180 about X
+    "z": (lambda v: (-v[0], -v[1], v[2]), lambda th: [180, 180 - th, 0]),   # 180 about Z
+}
+# Screenshots showed the 180-about-Y head upright in hand/ground but upside down on item displays (the "fixed"
+# view used on the mat and in the holo reveal), so mode "a" (the default) uses X for "fixed" and Y elsewhere.
+FACE_MODES = {"a": lambda ctx: "x" if ctx == "fixed" else "y", "b": lambda ctx: "y", "c": lambda ctx: "x", "d": lambda ctx: "z"}
+for mode, pick in FACE_MODES.items():
+    disp = {}
+    for ctx, (rot, tr, c) in CARD_DISPLAY.items():
+        turn, euler = TURNS[pick(ctx)]
+        local = turn(tuple(HEAD_S[i] * (HEAD_P0[i] - 8) for i in range(3)))
+        th_vec = tuple(HEAD_TARGET[i] - 8 - local[i] for i in range(3))
+        off = rot_y(th_vec, rot[1])
+        disp[ctx] = {"rotation": euler(rot[1]), "translation": [round(tr[i] + c*off[i], 4) for i in range(3)],
+                     "scale": [round(c*HEAD_S[i], 4) for i in range(3)]}
+    wjson(path("assets", NS, "models", "item", "card_head" + ("" if mode == "a" else "_" + mode) + ".json"),
+          {"textures": {"particle": f"{NS}:item/card_back"}, "gui_light": "front", "display": disp})
+
+def head_layer():
+    """Picks the head orientation from the card item's custom_model_data string (a/b/c/d)."""
+    spec = lambda m: {"type": "minecraft:special", "base": f"{NS}:item/card_head" + ("" if m == "a" else "_" + m), "model": {"type": "minecraft:player_head"}}
+    return {"type": "minecraft:select", "property": "minecraft:custom_model_data", "index": 0,
+            "cases": [{"when": m, "model": spec(m)} for m in ("b", "c", "d")], "fallback": spec("a")}
 
 wjson(path("assets", NS, "models", "item", "card_base.json"), {
     "textures": {"particle": f"{NS}:item/card_back"},
@@ -213,7 +231,7 @@ for bk in BACKGROUNDS:
         wjson(path("assets", NS, "items", n + "_holo.json"), {"model": {"type": "minecraft:composite", "models": [
             {"type": "minecraft:model", "model": f"{NS}:item/{n}"},
             {"type": "minecraft:model", "model": f"{NS}:item/card_holo_overlay"},
-            {"type": "minecraft:special", "base": f"{NS}:item/card_head", "model": {"type": "minecraft:player_head"}}]}})
+            head_layer()]}})
 
 # a deck on the mat: a box of card backs; the plugin scales its thickness to the cards left
 edge = Image.new("RGBA", (16, 16), (236, 228, 208, 255)); ed = ImageDraw.Draw(edge)
@@ -239,7 +257,7 @@ for bk in BACKGROUNDS:
               {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/{n}", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/{n}"}})
         wjson(path("assets", NS, "items", n + ".json"), {"model": {"type": "minecraft:composite", "models": [
             {"type": "minecraft:model", "model": f"{NS}:item/{n}"},
-            {"type": "minecraft:special", "base": f"{NS}:item/card_head", "model": {"type": "minecraft:player_head"}}]}})
+            head_layer()]}})
 
 # ---------- game mats: a flat square plate 16 x 16 model units; the plugin scales it (3, 1, 3) to 3 x 3 blocks ----------
 from mats import MATS
