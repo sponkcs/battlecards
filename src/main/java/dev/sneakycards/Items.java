@@ -92,11 +92,10 @@ public final class Items {
     private ItemStack buildCard(Card c, boolean holo, String mode) {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta m = it.getItemMeta();
-        if (!"a".equals(mode)) {
-            var cmd = m.getCustomModelDataComponent();
-            cmd.setStrings(List.of(mode));
-            m.setCustomModelDataComponent(cmd);
-        }
+        // the resource pack reads these: [0] head orientation mode, [1] the type badge in the card's corner
+        var cmd = m.getCustomModelDataComponent();
+        cmd.setStrings(List.of(mode, c.type().key()));
+        m.setCustomModelDataComponent(cmd);
         model(m, "card_" + c.background().key() + "_" + c.rarity().key() + (holo ? "_holo" : ""));
         m.displayName(holo ? t("✦ ", TextColor.color(0xB8F2FF)).append(t(c.name(), c.rarity().color())).decorate(TextDecoration.BOLD)
                 : t(c.name(), c.rarity().color()).decorate(TextDecoration.BOLD));
@@ -105,13 +104,13 @@ public final class Items {
         if (holo) lore.add(t("✦ Holographic", TextColor.color(0xB8F2FF)));
         if (!c.title().isBlank()) lore.add(Component.text(c.title(), NamedTextColor.GRAY).decorate(TextDecoration.ITALIC));
         lore.add(t(c.background().label, NamedTextColor.DARK_GRAY));
-        lore.add(t("Type: " + Rules.type(c).label + "   Team cost: " + Rules.cost(c.rarity()), NamedTextColor.AQUA));
+        lore.add(t(c.type().label + " type", c.type().color).append(t("   ❤ " + c.hp(), NamedTextColor.WHITE)));
         lore.add(Component.empty());
-        for (Stat s : Stat.values()) lore.add(t(s.label + ": " + c.stat(s), NamedTextColor.WHITE));
+        for (Move mv : moveLore(c)) lore.add(mv);
         lore.add(Component.empty());
-        for (Move mv : c.moves()) lore.add(t(mv.name() + " (" + mv.stat().label + " " + c.power(mv) + ", " + Rules.moveCost(c, mv) + " energy)", NamedTextColor.YELLOW));
-        lore.add(Component.empty());
-        lore.add(t("Right-click a mat slot to play", NamedTextColor.DARK_GRAY));
+        lore.add(t("Retreat: " + (c.retreat() == 0 ? "free" : "◆".repeat(c.retreat())), NamedTextColor.GRAY)
+                .append(t("   Weak to " + c.type().weakness().label + " (+10)", NamedTextColor.GRAY)));
+        lore.add(t("Deck cost: " + Rules.cost(c.rarity()), NamedTextColor.DARK_GRAY));
         m.lore(lore);
         m.getPersistentDataContainer().set(cardKey, PersistentDataType.STRING, c.id());
         if (holo) m.getPersistentDataContainer().set(holoKey, PersistentDataType.BYTE, (byte) 1);
@@ -119,6 +118,17 @@ public final class Items {
         // the resource pack draws this profile's head in the card's picture window
         it.setData(DataComponentTypes.PROFILE, profile(c));
         return it;
+    }
+
+    /** Two lines per move: "◆◆ Fireball  50" and its effect, if any. */
+    static List<Component> moveLore(Card c) {
+        List<Component> out = new ArrayList<>();
+        for (Move mv : c.moves()) {
+            out.add(t(mv.costText() + "  ", NamedTextColor.AQUA).append(t(mv.name(), NamedTextColor.YELLOW))
+                    .append(t(mv.damage() > 0 ? "  " + mv.damage() : "", NamedTextColor.WHITE)));
+            if (mv.effect() != MoveEffect.NONE) out.add(t("   " + mv.effect().description, NamedTextColor.GRAY));
+        }
+        return out;
     }
 
     public ItemStack of(HandCard h) { return h.isChar() ? card(h.card, h.holo) : itemCard(h.item); }
@@ -132,10 +142,9 @@ public final class Items {
         List<Component> lore = new ArrayList<>();
         lore.add(t(type.rarity.label + (type.kind == ItemType.Kind.TRAP ? " Trap" : " Item"), type.rarity.color()));
         lore.add(t(type.description, NamedTextColor.WHITE));
-        lore.add(t("Energy cost: " + type.cost, NamedTextColor.AQUA));
         lore.add(Component.empty());
-        lore.add(t("Before a battle: right-click your side", NamedTextColor.DARK_GRAY));
-        lore.add(t("of the mat to bring it (max 2).", NamedTextColor.DARK_GRAY));
+        lore.add(t("Free to play: 1 item or trap per turn", NamedTextColor.DARK_GRAY));
+        lore.add(t("Deck cost: " + Rules.cost(type.rarity), NamedTextColor.DARK_GRAY));
         m.lore(lore);
         m.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, type.name());
         it.setItemMeta(m);

@@ -61,8 +61,10 @@ def _unused_dashed_rect(d, b, color, width=2, dash=6):
 
 def common_layout(im, line, slot_fill, corner, emblem):
     d = ImageDraw.Draw(im, "RGBA")
-    for b in slot_boxes():
+    for i, b in enumerate(slot_boxes()):
         d.rounded_rectangle(b, radius=7, fill=slot_fill, outline=line, width=3)
+        if i % 3 == 1:   # the middle slot of each side is the Active spot: a gold inner border
+            d.rounded_rectangle((b[0] + 5, b[1] + 5, b[2] - 5, b[3] - 5), radius=5, outline=(255, 214, 100, 190), width=2)
     faint = line[:3] + (110,) if len(line) == 4 else line + (110,)
     for b in pile_boxes():
         d.rounded_rectangle(b, radius=5, outline=faint, width=2)

@@ -1,12 +1,12 @@
 cards-per-pack: 3
-card-face-mode: a             # how the character face sits on cards: a (automatic), or b/c/d if faces look wrong (try /cardadmin facetest)
+card-face-mode: a             # how the character face sits on cards: a (upright everywhere); b/c/d are test views (/cardadmin facetest)
 holo-chance: 0.03            # chance for each character card in a pack to be holographic (0.03 = 3%: about 1 holo every 11 packs)
 god-pack-weights: [0, 0, 35, 30, 22, 13]   # god pack rarity odds: Common, Uncommon, Rare, Epic, Legendary, Mythic
 god-pack-chance: 0.0         # chance that any pack secretly opens as a god pack (all holo, Rare or better); 0 = only summoned ones
 items-per-pack: 2            # item/trap cards added to each pack
 start-countdown-ticks: 100   # once both decks are on the mat, wait this long before shuffling
 pack-cooldown-ms: 400        # minimum time between pack openings per player
-max-cards-per-player: 3     # cards a player can have on the mat at once
+max-cards-per-player: 3     # cards a player can place with /cardadmin place (outside battles)
 mannequin-hover: 0.3        # how far the mannequin floats above its card (blocks)
 mannequin-size: 0.28        # mannequin scale; 1.0 = player size
 turn-menu-delay-ticks: 40   # wait before the turn menu opens by itself (20 ticks = 1 s; -1 = never, use right-click or /sc turn)
@@ -20,13 +20,7 @@ rules:
   deck-cost-cap: 35            # a deck's cards cost Common 1 ... Mythic 6 each
   points-to-win: 3             # every knockout scores 1 point
   hand-limit: 7                # cards drawn past this go to the discard pile
-  team-cost-cap: 10            # rarity costs: Common 1, Uncommon 2, Rare 3, Epic 4, Legendary 5, Mythic 6
-  energy-per-turn: 2
-  energy-max: 6
-  second-player-bonus-energy: 1  # the side that goes second starts with this much energy
-  rest-bonus-energy: 1         # extra energy for skipping a turn
-  damage-scale: 0.6            # damage = move power x this x type multiplier (x crit)
-  crit-multiplier: 1.5
-  type-advantage: 1.5          # Strength > Magicing > Dexterity > Strength
-  type-disadvantage: 0.75
+  mana-per-turn: 1             # mana you attach to one of your cards each turn (it stays on that card)
+  first-player-gets-mana: false  # false = the player who goes first gets no mana on the very first turn
+  weakness-bonus: 10           # extra damage when the attacker's type beats the defender's (Strength > Magicing > Dexterity > Strength)
 # solo-deck: [ ... ]           # the computer's deck in /sc solo (binder keys); default is the "Brick Wall" deck

@@ -30,11 +30,12 @@ public final class PlayCommand implements CommandExecutor, TabCompleter {
                         "SneakyCards rules",
                         "1. Build a 15-card deck in your binder (/binder, Deck builder): 6+ characters, max 2 of a card, deck cost 35 or less.",
                         "2. Right-click your side of a mat to place your deck (or /sc solo to play the computer). Both decks are shuffled.",
-                        "3. Draw 5, put up to 3 characters face down, click Ready. They flip; higher total Dexterity goes first.",
-                        "4. Each turn: draw 1, +2 energy (max 6). Play 1 character and 1 item or trap, then attack once (ends your turn).",
-                        "5. Moves cost 1-3 energy; Luck moves refund 1. Each card acts once per round.",
-                        "6. Types: Strength > Magicing > Dexterity > Strength (x1.5 / x0.75). Luck is the crit chance (x1.5).",
-                        "7. Each knockout scores 1 point. First to 3 wins. Hand limit 7; with an empty deck you just skip the draw.",
+                        "3. Draw 5. Put a character face down in the middle (your Active) and up to 2 on your Bench, click Ready. A coin decides who goes first.",
+                        "4. Each turn: draw 1 and get 1 mana (none on the very first turn). Attach it to any of your cards: mana stays on that card.",
+                        "5. Bench characters, play 1 item or trap, retreat once (the Active discards mana equal to its retreat cost).",
+                        "6. Attack with your Active: a move needs that much mana on it and hits the rival's Active. Attacking ends your turn.",
+                        "7. Types: Strength > Magicing > Dexterity > Strength: +10 damage. Each knockout scores 1 point; a benched card steps up.",
+                        "8. First to 3 points wins, or when the rival has no characters left in play. Hand limit 7.",
                         "Commands: /sc solo, /sc turn (open the battle menu), /sc end (end turn), /sc deck, /sc forfeit, /binder"};
                 for (int i = 0; i < rules.length; i++) p.sendMessage(Component.text(rules[i], i == 0 ? NamedTextColor.GOLD : NamedTextColor.GRAY));
             }

@@ -31,7 +31,7 @@ public final class DisplayManager {
         ItemDisplay face; Interaction hit; Mannequin man; TextDisplay preview, hpText;
         Anim anim = Anim.NONE; int animTick = 0; long age = 0;
         // battle state
-        int hp, maxHp; boolean ko = false; boolean acted = false; boolean faceDown = false; boolean stunned = false; boolean holo = false;   // acted: already used its action this round
+        int hp, maxHp, mana = 0, dazedTurn = -1; boolean ko = false; boolean faceDown = false; boolean dazed = false; boolean holo = false;   // mana: attached mana; dazed: can't attack or retreat this turn
         Mat mat; int side = -1, col = -1; HandCard source;   // source: the deck card this came from
         // attack animation state
         Vector dir; double reach = 1.0; Placed target; Runnable onImpact, onDone;
@@ -73,7 +73,7 @@ public final class DisplayManager {
     public Placed placeFor(UUID owner, Card card, Location top, float yaw, boolean faceDown, boolean holo) {
         World w = top.getWorld();
         Placed p = new Placed(owner, card, top.clone(), yaw);
-        p.maxHp = card.stat(Stat.HEALTH);
+        p.maxHp = card.hp();
         p.hp = p.maxHp;
         p.faceDown = faceDown;
         p.holo = holo;
@@ -237,9 +237,12 @@ public final class DisplayManager {
         b.append(Component.text(c.rarity().label + "  ", c.rarity().color()))
                 .append(Component.text(c.title(), NamedTextColor.GRAY).decorate(TextDecoration.ITALIC)).appendNewline();
         b.append(Component.text(c.background().label, NamedTextColor.DARK_GRAY)).appendNewline();
-        for (Stat s : Stat.values()) b.append(Component.text(s.label + " " + c.stat(s), NamedTextColor.WHITE)).appendNewline();
-        for (Move m : c.moves())
-            b.append(Component.text(m.name() + "  " + m.stat().label + " " + c.power(m), NamedTextColor.YELLOW)).appendNewline();
+        b.append(Component.text(c.type().label, c.type().color)).append(Component.text("  ❤ " + c.hp() + "  Retreat " + "◆".repeat(c.retreat()) + (c.retreat() == 0 ? "free" : ""), NamedTextColor.WHITE)).appendNewline();
+        for (Move m : c.moves()) {
+            b.append(Component.text(m.costText() + " ", NamedTextColor.AQUA)).append(Component.text(m.name() + (m.damage() > 0 ? "  " + m.damage() : ""), NamedTextColor.YELLOW)).appendNewline();
+            if (m.effect() != MoveEffect.NONE) b.append(Component.text("  " + m.effect().description, NamedTextColor.GRAY)).appendNewline();
+        }
+        b.append(Component.text("Weak to " + c.type().weakness().label, NamedTextColor.DARK_GRAY));
         return b.build();
     }
 
@@ -249,7 +252,10 @@ public final class DisplayManager {
         if (p.ko) return Component.text("KO", NamedTextColor.RED);
         double r = p.hp / (double) Math.max(1, p.maxHp);
         NamedTextColor c = r > 0.5 ? NamedTextColor.GREEN : r > 0.25 ? NamedTextColor.YELLOW : NamedTextColor.RED;
-        return Component.text("❤ " + p.hp, c);
+        var line = Component.text().append(Component.text("❤ " + p.hp, c));
+        if (p.mana > 0) line.append(Component.text("  " + "◆".repeat(Math.min(6, p.mana)) + (p.mana > 6 ? "+" : ""), NamedTextColor.AQUA));
+        if (p.dazed) line.append(Component.text("  dazed", NamedTextColor.GRAY));
+        return line.build();
     }
 
     public void refreshHp(Placed p) { if (p.hpText != null && p.hpText.isValid()) p.hpText.text(hpLine(p)); }
@@ -288,22 +294,21 @@ public final class DisplayManager {
         att.target = tgt;
         att.onImpact = onImpact;
         att.onDone = onDone;
-        att.anim = animFor(move);
+        att.anim = animFor(att.card.type());
         att.animTick = 0;
     }
 
-    private static Anim animFor(Move move) {
-        return switch (move.stat()) {
+    private static Anim animFor(CardType t) {
+        return switch (t) {
             case STRENGTH -> Anim.LUNGE;
             case DEXTERITY -> Anim.DASH;
             case MAGICING -> Anim.SPIN;
-            default -> Anim.BOUNCE;
         };
     }
 
     /** Plain animation without a target (used by /cardadmin move). */
     public void play(Placed p, Move move) {
-        p.anim = animFor(move);
+        p.anim = animFor(p.card.type());
         p.animTick = 0;
         Player owner = Bukkit.getPlayer(p.owner);
         if (owner != null) owner.sendActionBar(Component.text(p.card.name() + " uses " + move.name() + "!", p.card.rarity().color()));

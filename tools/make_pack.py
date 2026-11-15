@@ -89,6 +89,9 @@ def prev(d, im): d.polygon([(11,2),(4,8),(11,14)], fill=(240,240,240), outline=O
 def nxt(d, im): d.polygon([(5,2),(12,8),(5,14)], fill=(240,240,240), outline=OUTLINE)
 def info(d, im):
     d.ellipse((1,1,14,14), fill=(60,130,220), outline=(20,50,110)); d.rectangle((7,7,8,11), fill=(255,255,255)); d.rectangle((7,4,8,5), fill=(255,255,255))
+def mana(d, im):
+    d.polygon([(8,1),(14,8),(8,15),(2,8)], fill=(85,224,255), outline=(20,90,130))
+    d.polygon([(8,3),(11,8),(8,6)], fill=(210,250,255))
 def blank(d, im):
     d.rectangle((0,0,15,15), fill=(70,70,78,255)); d.rectangle((0,0,15,0), fill=(90,90,98,255)); d.rectangle((0,15,15,15), fill=(50,50,56,255))
 
@@ -96,7 +99,7 @@ for n, f in [("name_tag",name_tag),("skin",skin),("collection",collection),("luc
              ("dexterity",dexterity),("magicing",magicing),("health",health),
              ("minus",button("minus",False)),("minus_big",button("minus",True)),("plus",button("plus",False)),("plus_big",button("plus",True)),
              ("pack_on",packbox(True)),("pack_off",packbox(False)),("random",dice),("reset",reset),("create",create),
-             ("close",close),("gift",gift),("move",move),("prev",prev),("next",nxt),("info",info),("blank",blank)]:
+             ("close",close),("gift",gift),("move",move),("prev",prev),("next",nxt),("info",info),("mana",mana),("blank",blank)]:
     icon(n, f)
 for k, c in RARITIES.items(): icon("gem_" + k, gem(c))
 
@@ -111,8 +114,8 @@ def card_front(rc, mythic, scn):
         for i in range(0,40,2): d.point((i,0), fill=light); d.point((i,55), fill=light)
         for i in range(0,56,2): d.point((0,i), fill=light); d.point((39,i), fill=light)
     d.rectangle((5,5,34,10), fill=dark); d.rectangle((6,6,23,9), fill=light)
-    for x, c in ((6,(70,190,90)),(14,(220,70,70)),(22,(240,210,60)),(30,(170,100,255))): d.rectangle((x,41,x+4,45), fill=c)
-    d.rectangle((6,48,33,50), fill=(60,20,25)); d.rectangle((6,48,26,50), fill=(220,50,60))
+    for y in (41, 47):   # two move lines: a mana pip and a name bar
+        d.rectangle((5,y,34,y+4), fill=(40,42,50)); d.rectangle((6,y+1,7,y+3), fill=(85,224,255)); d.rectangle((10,y+2,27,y+2), fill=(120,124,136))
     im = base.resize((80,112), Image.NEAREST)
     im.paste(scn, (10,24))
     # the character's head is drawn on top by the item model (player_head layer using the item's profile)
@@ -168,9 +171,10 @@ TURNS = {  # head turn: (applied to the head, euler XYZ for a card turned theta 
     "x": (lambda v: (v[0], -v[1], -v[2]), lambda th: [180, -th, 0]),        # 180 about X
     "z": (lambda v: (-v[0], -v[1], v[2]), lambda th: [180, 180 - th, 0]),   # 180 about Z
 }
-# Screenshots showed the 180-about-Y head upright in hand/ground but upside down on item displays (the "fixed"
-# view used on the mat and in the holo reveal), so mode "a" (the default) uses X for "fixed" and Y elsewhere.
-FACE_MODES = {"a": lambda ctx: "x" if ctx == "fixed" else "y", "b": lambda ctx: "y", "c": lambda ctx: "x", "d": lambda ctx: "z"}
+# Minecraft 26.2's player_head special renderer draws the raw skull model: no flip, so the head hangs upside down
+# with its face towards -z. The card's front is the +z (south) face, so turning the head 180 about X stands it upright
+# facing out of the card in every view. Mode "a" (the default) does that; b/c/d are kept for /cardadmin facetest.
+FACE_MODES = {"a": lambda ctx: "x", "b": lambda ctx: "y", "c": lambda ctx: "x" if ctx == "fixed" else "y", "d": lambda ctx: "z"}
 for mode, pick in FACE_MODES.items():
     disp = {}
     for ctx, (rot, tr, c) in CARD_DISPLAY.items():
@@ -188,6 +192,27 @@ def head_layer():
     spec = lambda m: {"type": "minecraft:special", "base": f"{NS}:item/card_head" + ("" if m == "a" else "_" + m), "model": {"type": "minecraft:player_head"}}
     return {"type": "minecraft:select", "property": "minecraft:custom_model_data", "index": 0,
             "cases": [{"when": m, "model": spec(m)} for m in ("b", "c", "d")], "fallback": spec("a")}
+
+# type badge in the top-right corner of the card's name bar, picked by custom_model_data string 1
+TYPES = {"strength": ((224,83,61), "fist"), "dexterity": ((85,196,85), "arrow"), "magicing": ((168,102,255), "star")}
+def type_badge(col, glyph):
+    im = Image.new("RGBA", (16,16), (0,0,0,0)); d = ImageDraw.Draw(im)
+    dark = tuple(int(c*.45) for c in col)
+    d.ellipse((0,0,15,15), fill=col, outline=dark)
+    w = (255,255,255)
+    if glyph == "fist": d.rectangle((4,5,11,10), fill=w); d.rectangle((4,4,10,4), fill=w); d.line([(6,5),(6,8)], fill=dark); d.line([(9,5),(9,8)], fill=dark); d.rectangle((5,11,10,12), fill=w)
+    elif glyph == "arrow": d.line([(3,12),(12,3)], fill=w, width=2); d.polygon([(12,3),(8,3),(12,7)], fill=w); d.line([(3,10),(5,12)], fill=w)
+    else: d.polygon([(8,2),(10,6),(14,7),(11,10),(12,14),(8,12),(4,14),(5,10),(2,7),(6,6)], fill=w)
+    return im
+for tk, (tc, tg) in TYPES.items():
+    type_badge(tc, tg).save(path("assets", NS, "textures", "item", f"type_{tk}.png"))
+    wjson(path("assets", NS, "models", "item", f"type_{tk}.json"), {
+        "parent": f"{NS}:item/card_base", "textures": {"badge": f"{NS}:item/type_{tk}", "particle": f"{NS}:item/type_{tk}"},
+        "elements": [{"from": [10.4, 12.5, 8.26], "to": [11.6, 13.7, 8.26], "faces": {"south": {"uv": [0, 0, 16, 16], "texture": "#badge"}}}]})
+def type_layer():
+    return {"type": "minecraft:select", "property": "minecraft:custom_model_data", "index": 1,
+            "cases": [{"when": tk, "model": {"type": "minecraft:model", "model": f"{NS}:item/type_{tk}"}} for tk in TYPES],
+            "fallback": {"type": "minecraft:empty"}}
 
 wjson(path("assets", NS, "models", "item", "card_base.json"), {
     "textures": {"particle": f"{NS}:item/card_back"},
@@ -231,7 +256,7 @@ for bk in BACKGROUNDS:
         wjson(path("assets", NS, "items", n + "_holo.json"), {"model": {"type": "minecraft:composite", "models": [
             {"type": "minecraft:model", "model": f"{NS}:item/{n}"},
             {"type": "minecraft:model", "model": f"{NS}:item/card_holo_overlay"},
-            head_layer()]}})
+            type_layer(), head_layer()]}})
 
 # a deck on the mat: a box of card backs; the plugin scales its thickness to the cards left
 edge = Image.new("RGBA", (16, 16), (236, 228, 208, 255)); ed = ImageDraw.Draw(edge)
@@ -257,7 +282,7 @@ for bk in BACKGROUNDS:
               {"parent": f"{NS}:item/card_base", "textures": {"front": f"{NS}:item/{n}", "back": f"{NS}:item/card_back", "particle": f"{NS}:item/{n}"}})
         wjson(path("assets", NS, "items", n + ".json"), {"model": {"type": "minecraft:composite", "models": [
             {"type": "minecraft:model", "model": f"{NS}:item/{n}"},
-            head_layer()]}})
+            type_layer(), head_layer()]}})
 
 # ---------- game mats: a flat square plate 16 x 16 model units; the plugin scales it (3, 1, 3) to 3 x 3 blocks ----------
 from mats import MATS
