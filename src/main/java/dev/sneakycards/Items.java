@@ -106,7 +106,7 @@ public final class Items {
         lore.add(t(c.background().label, NamedTextColor.DARK_GRAY));
         lore.add(t(c.type().label + " type", c.type().color).append(t("   ❤ " + c.hp(), NamedTextColor.WHITE)));
         lore.add(Component.empty());
-        for (Move mv : moveLore(c)) lore.add(mv);
+        lore.addAll(moveLore(c));
         lore.add(Component.empty());
         lore.add(t("Retreat: " + (c.retreat() == 0 ? "free" : "◆".repeat(c.retreat())), NamedTextColor.GRAY)
                 .append(t("   Weak to " + c.type().weakness().label + " (+10)", NamedTextColor.GRAY)));
