@@ -1,0 +1,25 @@
+name: probe
+on: { push: { branches: [probe-mc] } }
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '25' }
+      - run: |
+          set -e
+          curl -s https://piston-meta.mojang.com/mc/game/version_manifest_v2.json > m.json
+          python3 -c "import json;m=json.load(open('m.json'));print('latest',m['latest']);print([v['id'] for v in m['versions'][:15]])"
+          V=$(python3 -c "import json;m=json.load(open('m.json'));ids=[v['id'] for v in m['versions']];print('26.2' if '26.2' in ids else m['latest']['release'])")
+          echo "version $V"
+          U=$(python3 -c "import json;m=json.load(open('m.json'));print([v['url'] for v in m['versions'] if v['id']=='$V'][0])")
+          curl -s "$U" > v.json
+          curl -s -o client.jar $(python3 -c "import json;print(json.load(open('v.json'))['downloads']['client']['url'])")
+          curl -sL -o vf.jar https://repo1.maven.org/maven2/org/vineflower/vineflower/1.11.1/vineflower-1.11.1.jar
+          mkdir x && cd x && unzip -q ../client.jar && cd ..
+          find x -iname '*Skull*' -o -iname '*PlayerHead*' -o -iname 'ItemStackRenderState*' -o -iname 'ItemTransform.class' -o -iname 'DisplayRenderer*' | head -40
+          mkdir out
+          find x -name 'SkullBlockRenderer*.class' -o -name 'SkullSpecialRenderer*.class' -o -name 'PlayerHeadSpecialRenderer*.class' -o -name 'ItemStackRenderState*.class' -o -name 'ItemTransform.class' -o -name 'SkullModel.class' -o -name 'DisplayRenderer*.class' -o -name 'ItemEntityRenderer.class' -o -name 'ItemTransforms.class' > list.txt
+          cat list.txt
+          java -jar vf.jar $(cat list.txt) out/ > vf.log 2>&1 || tail -20 vf.log
+          for f in $(find out -name '*.java'); do echo "=================== $f"; cat $f | head -400; done
