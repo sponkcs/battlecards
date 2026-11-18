@@ -51,7 +51,7 @@ final class Mat {
     int first = 0;                                // the side that took the first turn
 
     static final class Trap {
-        final ItemType type; ItemDisplay display; HandCard source;
+        final ItemType type; ItemDisplay display; HandCard source; int spot;
         Trap(ItemType type) { this.type = type; }
     }
 

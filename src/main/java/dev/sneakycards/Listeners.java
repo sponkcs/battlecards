@@ -40,6 +40,23 @@ public final class Listeners implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
         Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.sendPack(e.getPlayer()), 20L);
+        refreshCards(e.getPlayer().getInventory());
+    }
+
+    /** Swaps card items for freshly built ones, so cards made before an update get the current text and look. */
+    private void refreshCards(Inventory inv) {
+        Items items = plugin.items();
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack it = inv.getItem(i);
+            if (it == null) continue;
+            String id = items.cardId(it);
+            if (id == null) continue;
+            Card c = plugin.registry().get(id);
+            if (c == null) continue;
+            ItemStack fresh = items.card(c, items.isHolo(it)).clone();
+            fresh.setAmount(it.getAmount());
+            inv.setItem(i, fresh);
+        }
     }
 
     @EventHandler

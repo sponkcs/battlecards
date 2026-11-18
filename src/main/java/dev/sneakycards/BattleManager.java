@@ -474,7 +474,7 @@ public final class BattleManager {
     /** Attaches this turn's mana to one of your cards. It stays there until the card is knocked out, retreats or loses it. */
     public boolean attachMana(Mat m, int side, DisplayManager.Placed c) {
         Player p = player(m, side);
-        if (!myTurn(m, side) || c == null || c.ko || c.side != side || c.faceDown) return false;
+        if (!myTurn(m, side) || c == null || c.ko || c.side != side) return false;   // a card benched this instant may still be flipping over
         if (m.mana[side] <= 0) { say(p, m.turns[0] + m.turns[1] == 1 ? "No mana on the very first turn." : "You already attached your mana this turn.", NamedTextColor.YELLOW); return false; }
         m.mana[side]--;
         c.mana++;
@@ -622,7 +622,10 @@ public final class BattleManager {
         Component used = Component.text(who + " used ", NamedTextColor.WHITE).append(Items.t(t.label, t.rarity.color()));
         if (t.kind == ItemType.Kind.TRAP) {
             Mat.Trap trap = new Mat.Trap(t);
-            Location spot = m.trapSpot(side, m.traps[side].size());
+            int free = 0;   // the trap spot that isn't taken (a sprung trap frees its spot)
+            for (Mat.Trap other : m.traps[side]) if (other.spot == free) free = 1 - free;
+            trap.spot = free;
+            Location spot = m.trapSpot(side, free);
             trap.display = w.spawn(spot.clone().add(0, 0.07, 0), ItemDisplay.class, d -> {
                 d.setItemStack(plugin.items().cardBack());
                 d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
